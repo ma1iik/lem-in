@@ -43,8 +43,12 @@ int is_link_format(char* line) {
 		count++;
 
 	int valid = (count == 2 &&
-				(ft_atoi(links[0]) >= 0) &&
-				(ft_atoi(links[1]) >= 0))
+				is_room_name_format(links[0]) &&
+				is_room_name_format(links[1]));
+
+	for (int i = 0; links[i] != NULL; i++)
+		free(links[i]);
+	free(links);
 	return valid;
 }
 
@@ -61,7 +65,11 @@ int is_room_format(char *line) {
 	int valid = (count == 3 &&
 				is_room_name_format(room[0]) &&
 				(ft_atoi(room[1]) >= 0) &&
-				(ft_atoi(room[2]) >= 0))
+				(ft_atoi(room[2]) >= 0));
+
+	for (int i = 0; room[i] != NULL; i++)
+		free(room[i]);
+	free(room);
 	return valid;
 }
 
@@ -103,21 +111,21 @@ void create_link(t_farm *farm, char *line){
 		current = current->next;
 	}
 
-	t_list *current = farm->rooms;
+	t_list *current2 = farm->rooms;
 	t_room *room2 = NULL;
-	while (current) {
-		t_room *room = (t_room *)current->content;
+	while (current2) {
+		t_room *room = (t_room *)current2->content;
 		if (ft_strcmp(room->name, name2) == 0) {
 			room2 = room;
 			break;
 		}
-		current = current->next;
+		current2 = current2->next;
 	}
 
-	t_list *node1 = ft_lstnew(room2)
-	ft_lstadd_back(room1->connections, node1);
+	t_list *node1 = ft_lstnew(room2);
+	ft_lstadd_back(&room1->connections, node1);
 
-	t_list *node2 = ft_lstnew(room1)
+	t_list *node2 = ft_lstnew(room1);
 	ft_lstadd_back(room2->connections, node2);
 
 	for (int i = 0; links[i]; i++)
@@ -125,15 +133,15 @@ void create_link(t_farm *farm, char *line){
 	free(links);
 }
 
-void add_command(line, &next_is_start, &next_is_end, passing_phase){
+void add_command(char *line, int *next_is_start, int *next_is_end){
 	if (ft_strcmp(line, "##start") == 0) {
 		*next_is_start = 1;
 		*next_is_end = 0;
     }
 
 	if (ft_strcmp(line, "##end") == 0) {
-		*next_is_end == 1;
-		*next_is_start == 0;
+		*next_is_end = 1;
+		*next_is_start = 0;
 	}
 }
 
@@ -199,7 +207,7 @@ t_farm *parse_input(){
 					exit(1);
 				break;
 			case LINE_COMMAND:
-				add_command(line, &next_is_start, &next_is_end, passing_phase);
+				add_command(line, &next_is_start, &next_is_end);
 				break;
 			case LINE_COMMENT:
 				break;
@@ -218,21 +226,21 @@ t_farm *parse_input(){
 			free(line);
 	}
 	for(int i = 0; i < farm->line_count; i++)
-		printf("%s", farm->input_lines[i]);
+		ft_printf("%s", farm->input_lines[i]);
 	return farm;
 }
 
 int main(int argc, char **argv){
 	(void)argv;
 	if (argc != 1){
-		printf("ERROR: No arguments allowed\n");
+		ft_printf("ERROR: No arguments allowed\n");
 		return 1;
 	}
-	if (isatty(0)) {
-		printf("Usage: %s < input_file.map\n", argv[0]);
-		printf("   or: echo \"input\" | %s\n", argv[0]);
-		return 1;
-	}
+	// if (isatty(0)) {
+	// 	ft_printf("Usage: %s < input_file.map\n", argv[0]);
+	// 	ft_printf("   or: echo \"input\" | %s\n", argv[0]);
+	// 	return 1;
+	// }
 	t_farm *farm = parse_input();
 	if (!farm)
 		exit(0);

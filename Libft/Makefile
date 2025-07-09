@@ -6,7 +6,7 @@
 #    By: ma1iik <ma1iik@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2021/12/18 19:37:01 by misrailo          #+#    #+#              #
-#    Updated: 2025/07/07 09:18:08 by ma1iik           ###   ########.fr        #
+#    Updated: 2025/07/09 02:34:56 by ma1iik           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -56,6 +56,8 @@ SRC=	ft_strlcpy.c \
 	 	ft_substr.c \
 		ft_memccpy.c \
 		get_next_line.c \
+		ft_strcmp.c \
+		ft_printf.c \
 
 SRC_B=	ft_lstnew.c \
 		ft_lstadd_front.c \

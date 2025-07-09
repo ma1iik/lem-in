@@ -6,7 +6,7 @@
 /*   By: ma1iik <ma1iik@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/10/23 09:17:45 by misrailo          #+#    #+#             */
-/*   Updated: 2025/07/06 23:34:39 by ma1iik           ###   ########.fr       */
+/*   Updated: 2025/07/09 02:34:45 by ma1iik           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ int		ft_isprint(int c);
 int		ft_tolower(int c);
 int		ft_toupper(int c);
 int		ft_atoi(const char *str);
+int		ft_strcmp(const char *s1, const char *s2);
 int		ft_strncmp(const char *s1, const char *s2, size_t n);
 int		ft_memcmp(const void *s1, const void *s2, size_t len);
 void	ft_putchar_fd(char c, int fd);
@@ -70,6 +71,7 @@ char	*ft_strtrim(char const *s1, char const *set);
 char	*ft_substr(char const *s, unsigned int start, size_t len);
 void	*ft_memccpy(void *dst, const void *src, int c, size_t n);
 
+
 // BONUSES //
 t_list	*ft_lstnew(void *content);
 void	ft_lstadd_front(t_list **lst, t_list *new);
@@ -87,5 +89,6 @@ char	*first_line(int fd, char *saveline);
 char	*clean_line(char *s);
 char	*ft_save_line(char *s);
 char	*get_next_line(int fd);
+int		ft_printf(const char *format, ...);
 
 #endif
