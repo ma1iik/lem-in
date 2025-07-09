@@ -18,45 +18,208 @@ t_farm *init_farm(void){
     return (farm);
 }
 
+int is_room_name_format(char *name) {
+	if (!name)
+		return 0;
+
+	if (name[0] != 'L' && name[0] != '#') {
+		for ( int i = 0; i < ft_strlen(name); i++){
+			if !(ft_isalnum(name[i]))
+				return 0;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+int is_link_format(char* line) {
+	char **links = ft_split(line, '-');
+
+	if (!links)
+		return 0;
+
+	int count = 0;
+	while (links[count])
+		count++;
+
+	int valid = (count == 2 &&
+				(ft_atoi(links[0]) >= 0) &&
+				(ft_atoi(links[1]) >= 0))
+	return valid;
+}
+
+int is_room_format(char *line) {
+	char **room = ft_split(line, ' ');
+
+	if (!room)
+		return 0;
+
+	int count = 0;
+	while (room[count])
+		count++;
+
+	int valid = (count == 3 &&
+				is_room_name_format(room[0]) &&
+				(ft_atoi(room[1]) >= 0) &&
+				(ft_atoi(room[2]) >= 0))
+	return valid;
+}
+
+t_line_type get_line_type(char *line, int *passing_phase) {
+	if (*passing_phase == 0 && ft_atoi(line) > 0)
+		return LINE_ANT_COUNT;
+	if (!line || ft_strlen(line) == 0)
+		return LINE_EMPTY;
+	if (is_room_format(line) && *passing_phase == 1)
+		return LINE_ROOM;
+	if (is_link_format(line) && (*passing_phase == 1 || *passing_phase == 2))
+		if (*passing_phase == 1)
+			*passing_phase = 2;
+		return LINE_LINK;
+	if (ft_strncmp(line, "##", 2) == 0 && *passing_phase == 1)
+        return LINE_COMMAND;
+	if (ft_strncmp(line, "#", 1) == 0)
+        return LINE_COMMENT;
+	return LINE_INVALID;
+}
+
+void create_link(t_farm *farm, char *line){
+	char **links = ft_split(line, '-');
+
+	if (!links)
+		exit(1);
+
+	char *name1 = links[0];
+	char *name2 = links[1];
+
+	t_list *current = farm->rooms;
+	t_room *room1 = NULL;
+	while (current) {
+		t_room *room = (t_room *)current->content;
+		if (ft_strcmp(room->name, name1) == 0) {
+			room1 = room;
+			break;
+		}
+		current = current->next;
+	}
+
+	t_list *current = farm->rooms;
+	t_room *room2 = NULL;
+	while (current) {
+		t_room *room = (t_room *)current->content;
+		if (ft_strcmp(room->name, name2) == 0) {
+			room2 = room;
+			break;
+		}
+		current = current->next;
+	}
+
+	t_list *node1 = ft_lstnew(room2)
+	ft_lstadd_back(room1->connections, node1);
+
+	t_list *node2 = ft_lstnew(room1)
+	ft_lstadd_back(room2->connections, node2);
+
+	for (int i = 0; links[i]; i++)
+		free(links[i]);
+	free(links);
+}
+
+void add_command(line, &next_is_start, &next_is_end, passing_phase){
+	if (ft_strcmp(line, "##start") == 0) {
+		*next_is_start = 1;
+		*next_is_end = 0;
+    }
+
+	if (ft_strcmp(line, "##end") == 0) {
+		*next_is_end == 1;
+		*next_is_start == 0;
+	}
+}
+
+void create_room(t_farm *farm, char* line, int next_is_start, int next_is_end) {
+	if (!line)
+		exit(1);
+
+	if ((next_is_start && farm->start_room != NULL) ||
+		(next_is_end && farm->end_room != NULL) ||
+		(next_is_start && next_is_end)){
+			exit(1);
+	}
+
+	char **parts = ft_split(line, ' ');
+
+	t_room *room = malloc(sizeof(t_room) * 1);
+	if (!room)
+		exit(1);
+	room->name = ft_strdup(parts[0]);
+	room->x = ft_atoi(parts[1]);
+	room->y = ft_atoi(parts[2]);
+	room->is_start = 0;
+	room->is_end = 0;
+	room->connections = NULL;
+	if (next_is_start){
+		room->is_start = 1;
+		farm->start_room = room;
+	}
+	else if (next_is_end){
+		room->is_end = 1;
+		farm->end_room = room;
+	}
+
+	ft_lstadd_back(&farm->rooms, ft_lstnew(room));
+
+	for (int i = 0; parts[i] != NULL; i++)
+		free(parts[i]);
+	free(parts);
+}
+
 t_farm *parse_input(){
 	t_farm *farm;
 	farm = init_farm();
 	if (!farm)
 		return (NULL);
 
+	char *line = NULL;
 	int passing_phase = 0;
 	int next_is_start = 0;
 	int next_is_end = 0;
-	// char *line = get_next_line(STDIN_FILENO);
-	// if (ft_atoi(line) <= 0){
-	// 	free_farm(farm);
-	// 	return (NULL);
-	// }
-	// farm->ant_count = ft_atoi(line);
-	// store_input_lines(farm, line);
-	// if (!farm->input_lines){
-	// 	free_farm(farm);
-	// 	return (NULL);
-	// }
-	// free(line);
 	while ((line = get_next_line(STDIN_FILENO)) != NULL){
-		t_line_type line_type = get_line_type(line, passing_phase)
+		t_line_type line_type = get_line_type(line, &passing_phase);
+		
+		store_input_lines(farm, line);
+		
 		switch (line_type) {
 			case LINE_ANT_COUNT:
+				if (passing_phase == 0) {
+					passing_phase++;
+					farm->ant_count = ft_atoi(line);
+				}
+				else
+					exit(1);
+				break;
 			case LINE_COMMAND:
+				add_command(line, &next_is_start, &next_is_end, passing_phase);
+				break;
 			case LINE_COMMENT:
+				break;
 			case LINE_ROOM:
+				create_room(farm, line, next_is_start, next_is_end);
+				break;
 			case LINE_LINK:
+				create_link(farm, line);
+				break;
 			case LINE_EMPTY:
 			case LINE_INVALID:
-			store_input_lines(farm, line);
-			num++;
+				free(line);
+				free_farm(farm);
+				exit(1);
+			}
 			free(line);
-		}
 	}
 	for(int i = 0; i < farm->line_count; i++)
 		printf("%s", farm->input_lines[i]);
-	return 0;
+	return farm;
 }
 
 int main(int argc, char **argv){
