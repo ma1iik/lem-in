@@ -22,14 +22,14 @@ int is_room_name_format(char *name) {
 	if (!name)
 		return 0;
 
-	if (name[0] != 'L' && name[0] != '#') {
-		for ( int i = 0; i < ft_strlen(name); i++){
-			if !(ft_isalnum(name[i]))
-				return 0;
-		}
-		return 1;
-	}
-	return 0;
+	if (name[0] == 'L' || name[0] == '#')
+		return 0;
+
+	for (int i = 0; name[i]; i++) {
+        if (!ft_isalnum(name[i]) && name[i] != '_' && name[i] != '-')
+            return 0;
+    }
+	return 1;
 }
 
 int is_link_format(char* line) {
@@ -80,10 +80,11 @@ t_line_type get_line_type(char *line, int *passing_phase) {
 		return LINE_EMPTY;
 	if (is_room_format(line) && *passing_phase == 1)
 		return LINE_ROOM;
-	if (is_link_format(line) && (*passing_phase == 1 || *passing_phase == 2))
+	if (is_link_format(line) && (*passing_phase == 1 || *passing_phase == 2)) {
 		if (*passing_phase == 1)
 			*passing_phase = 2;
 		return LINE_LINK;
+	}
 	if (ft_strncmp(line, "##", 2) == 0 && *passing_phase == 1)
         return LINE_COMMAND;
 	if (ft_strncmp(line, "#", 1) == 0)
@@ -91,46 +92,76 @@ t_line_type get_line_type(char *line, int *passing_phase) {
 	return LINE_INVALID;
 }
 
-void create_link(t_farm *farm, char *line){
+t_room *find_room_by_name(t_farm *farm, char *name) {
+	t_list *current = farm->rooms;
+
+	while (current) {
+		t_room *room = (t_room *)current->content;
+		if (ft_strcmp(room->name, name) == 0)
+			return room;
+		current = current->next;
+	}
+	return NULL;
+}
+
+int room_already_connected(t_room *room1, t_room *room2) {
+	t_list *current = room1->connections;
+
+	while (current) {
+		if ((t_room *)current->content == room2)
+			return 1;
+		current = current->next;
+	}
+	return 0;
+}
+
+int create_link(t_farm *farm, char *line){
 	char **links = ft_split(line, '-');
 
 	if (!links)
-		exit(1);
+		return 0;
+	
 
 	char *name1 = links[0];
 	char *name2 = links[1];
 
-	t_list *current = farm->rooms;
-	t_room *room1 = NULL;
-	while (current) {
-		t_room *room = (t_room *)current->content;
-		if (ft_strcmp(room->name, name1) == 0) {
-			room1 = room;
-			break;
-		}
-		current = current->next;
+	if (ft_strcmp(name1, name2) == 0) {
+		for (int i = 0; links[i]; i++)
+			free(links[i]);
+		free(links);
+		return 0;
 	}
 
-	t_list *current2 = farm->rooms;
-	t_room *room2 = NULL;
-	while (current2) {
-		t_room *room = (t_room *)current2->content;
-		if (ft_strcmp(room->name, name2) == 0) {
-			room2 = room;
-			break;
-		}
-		current2 = current2->next;
+	t_room *room1 = find_room_by_name(farm, name1);
+    t_room *room2 = find_room_by_name(farm, name2);
+
+	if ((!room1 || !room2) || (room_already_connected(room1, room2))) {
+		for (int i = 0; links[i]; i++)
+			free(links[i]);
+		free(links);
+		return 0;
 	}
 
 	t_list *node1 = ft_lstnew(room2);
-	ft_lstadd_back(&room1->connections, node1);
-
 	t_list *node2 = ft_lstnew(room1);
+
+	if (!node1 || !node2) {
+		if (node1) free(node1);
+		if (node2) free(node2);
+		for (int i = 0; links[i]; i++)
+			free(links[i]);
+		free(links);
+		return 0;
+	}
+
+	ft_lstadd_back(&room1->connections, node1);
 	ft_lstadd_back(room2->connections, node2);
 
 	for (int i = 0; links[i]; i++)
 		free(links[i]);
 	free(links);
+
+	return 1;
 }
 
 void add_command(char *line, int *next_is_start, int *next_is_end){
@@ -215,7 +246,11 @@ t_farm *parse_input(){
 				create_room(farm, line, next_is_start, next_is_end);
 				break;
 			case LINE_LINK:
-				create_link(farm, line);
+				if (!create_link(farm, line)){
+					free(line);
+					free_farm(farm);
+					exit(1);
+				}
 				break;
 			case LINE_EMPTY:
 			case LINE_INVALID:
