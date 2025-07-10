@@ -64,8 +64,8 @@ int is_room_format(char *line) {
 
 	int valid = (count == 3 &&
 				is_room_name_format(room[0]) &&
-				(ft_atoi(room[1]) >= 0) &&
-				(ft_atoi(room[2]) >= 0));
+				is_valid_num(room[1]) &&
+				is_valid_num(room[2]));
 
 	for (int i = 0; room[i] != NULL; i++)
 		free(room[i]);
@@ -74,8 +74,11 @@ int is_room_format(char *line) {
 }
 
 t_line_type get_line_type(char *line, int *passing_phase) {
-	if (*passing_phase == 0 && ft_atoi(line) > 0)
+	if (*passing_phase == 0 && is_valid_num(line)) {
+		if (line[0] == '0')
+			exit(1);
 		return LINE_ANT_COUNT;
+	}
 	if (!line || ft_strlen(line) == 0)
 		return LINE_EMPTY;
 	if (is_room_format(line) && *passing_phase == 1)
@@ -155,7 +158,7 @@ int create_link(t_farm *farm, char *line){
 	}
 
 	ft_lstadd_back(&room1->connections, node1);
-	ft_lstadd_back(room2->connections, node2);
+	ft_lstadd_back(&room2->connections, node2);
 
 	for (int i = 0; links[i]; i++)
 		free(links[i]);
@@ -187,6 +190,13 @@ void create_room(t_farm *farm, char* line, int next_is_start, int next_is_end) {
 	}
 
 	char **parts = ft_split(line, ' ');
+	
+	if (find_room_by_name(farm, parts[0])) {
+	for (int i = 0; parts[i]; i++)
+		free(parts[i]);
+	free(parts);
+	exit(1);
+	}
 
 	t_room *room = malloc(sizeof(t_room) * 1);
 	if (!room)
@@ -224,6 +234,7 @@ t_farm *parse_input(){
 	int next_is_start = 0;
 	int next_is_end = 0;
 	while ((line = get_next_line(STDIN_FILENO)) != NULL){
+		line = trim_newline(line);
 		t_line_type line_type = get_line_type(line, &passing_phase);
 		
 		store_input_lines(farm, line);
@@ -244,6 +255,8 @@ t_farm *parse_input(){
 				break;
 			case LINE_ROOM:
 				create_room(farm, line, next_is_start, next_is_end);
+				next_is_start = 0;
+				next_is_end = 0;
 				break;
 			case LINE_LINK:
 				if (!create_link(farm, line)){
@@ -262,6 +275,12 @@ t_farm *parse_input(){
 	}
 	for(int i = 0; i < farm->line_count; i++)
 		ft_printf("%s", farm->input_lines[i]);
+
+	if (!farm->start_room || !farm->end_room) {
+	free_farm(farm);
+	ft_printf("ERROR\n");
+	exit(1);
+	}
 	return farm;
 }
 

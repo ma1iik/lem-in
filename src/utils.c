@@ -49,3 +49,23 @@ void store_input_lines(t_farm *farm, char *line){
 	return;
 }
 
+int is_valid_num(char *str) {
+	if (!str || !*str)
+		return 0;
+	
+	int i = 0;
+	while (str[i]) {
+		if (!ft_isdigit(str[i]))
+			return 0;
+		i++;
+	}
+	return 1;
+}
+
+char *trim_newline(char *str) {
+	int len = ft_strlen(str);
+	if (len > 0 && str[len - 1] == '\n')
+		str[len - 1] = '\0';
+	return str;
+}
+

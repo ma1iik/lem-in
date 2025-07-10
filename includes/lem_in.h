@@ -37,6 +37,8 @@ void store_input_lines(t_farm *farm, char *line);
 void free_farm(t_farm *farm);
 void free_rooms(t_list *rooms);
 void free_single_room(t_room *room);
+int is_valid_num(char *str);
+char *trim_newline(char *str);
 
 
 #endif
