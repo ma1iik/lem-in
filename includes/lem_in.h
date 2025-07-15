@@ -12,6 +12,7 @@ typedef struct s_room {
     int is_start;
     int is_end;
     t_list *connections;
+    struct s_room *parent;
 } t_room;
 
 typedef struct s_farm {
@@ -23,6 +24,11 @@ typedef struct s_farm {
     int line_count;
 } t_farm;
 
+typedef struct s_path {
+    int len;
+    t_list *path;
+} t_path;
+
 typedef enum e_line_type {
     LINE_ANT_COUNT,
     LINE_COMMAND,
@@ -33,12 +39,24 @@ typedef enum e_line_type {
     LINE_INVALID
 } t_line_type;
 
-void store_input_lines(t_farm *farm, char *line);
-void free_farm(t_farm *farm);
-void free_rooms(t_list *rooms);
-void free_single_room(t_room *room);
-int is_valid_num(char *str);
-char *trim_newline(char *str);
+void        store_input_lines(t_farm *farm, char *line);
+void        free_farm(t_farm *farm);
+void        free_rooms(t_list *rooms);
+void        free_single_room(t_room *room);
+int         is_valid_num(char *str);
+char        *trim_newline(char *str);
+
+t_farm		*init_farm(void);
+int			is_room_name_format(char *name);
+int			is_link_format(char *line);
+int			is_room_format(char *line);
+t_line_type	get_line_type(char *line, int *passing_phase);
+t_room		*find_room_by_name(t_farm *farm, char *name);
+int			room_already_connected(t_room *room1, t_room *room2);
+int			create_link(t_farm *farm, char *line);
+void		add_command(char *line, int *next_is_start, int *next_is_end);
+void		create_room(t_farm *farm, char *line, int next_is_start, int next_is_end);
+t_farm		*parse_input(void);
 
 
 #endif

@@ -1,5 +1,5 @@
 CC =gcc
-CFLAGS = -Wall -Werror -Wextra -g -std=c99
+CFLAGS = -Wall -Werror -Wextra -Wno-unused-variable -g -std=c99
 NAME = lem-in
 
 SRC_DIR = src
