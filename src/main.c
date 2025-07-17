@@ -1,116 +1,140 @@
 #include "lem_in.h"
 
-int is_visited(t_room *neighbour, t_list *visited) {
-	if (!visited)
-		return 0;
-
-	for (t_list *cur = visited; cur != NULL; cur = cur->next) {
-		if (cur->content == neighbour)
-			return 1;
+int paths_conflict(t_path path1, t_path path2) {
+	t_list *p1 = path1.path;
+	
+	while (p1) {
+		t_room *room1 = (t_room *)p1->content;
+		
+		if (room1->is_start || room1->is_end) {
+			p1 = p1->next;
+			continue;
+		}
+		
+		t_list *p2 = path2.path;
+		while (p2) {
+			t_room *room2 = (t_room *)p2->content;
+			if (room1 == room2) return 1;
+			p2 = p2->next;
+		}
+		p1 = p1->next;
 	}
 	return 0;
 }
 
-void del_from_visited(t_room *del, t_list **visited) {
-	if (!visited || !*visited)
-		return;
-
-	if ((*visited)->content == del) {
-		t_list *to_delete = *visited;
-		*visited = (*visited)->next;
-		free(to_delete);
-		return;
+int can_finish_in_turns(t_path *paths, int path_count, int total_ants, int target_turns) {
+	int ants_placed = 0;
+	
+	for (int i = 0; i < path_count; i++) {
+		int max_ants_on_path = target_turns - paths[i].len + 1;
+		
+		if (max_ants_on_path <= 0) continue;
+		
+		int ants_to_use = (max_ants_on_path > total_ants - ants_placed) ? total_ants - ants_placed : max_ants_on_path;
+		ants_placed += ants_to_use;
+		
+		if (ants_placed >= total_ants) return 1;
 	}
+	return 0;
+}
 
-	t_list *prev = *visited;
-	t_list *cur = (*visited)->next;
+int longest_path_length(t_path *paths, int path_count) {
+    int longest = 0;
+    for (int i = 0; i < path_count; i++) {
+        if (paths[i].len > longest)
+            longest = paths[i].len;
+    }
+    return longest;
+}
 
-	while (cur) {
-		if (cur->content == del) {
-			prev->next = cur->next;
-			free(cur);
-			return;
+void add_path_set(t_path_set **valid_sets, t_path_set candidate) {
+    static int set_count = 0;
+    static int set_capacity = 0;
+    
+    if (!*valid_sets) {
+        set_capacity = 2;
+        set_count = 0;
+        *valid_sets = malloc(sizeof(t_path_set) * set_capacity);
+    }
+    else if (set_count + 1 >= set_capacity) {
+        set_capacity *= 2;
+        t_path_set *new_sets = malloc(sizeof(t_path_set) * set_capacity);
+        for (int i = 0; i < set_count; i++) {
+            new_sets[i] = (*valid_sets)[i];
+        }
+        free(*valid_sets);
+        *valid_sets = new_sets;
+    }
+    
+    (*valid_sets)[set_count] = candidate;
+    set_count++;
+    (*valid_sets)[set_count] = (t_path_set){NULL, 0};
+}
+
+int calc_least_turns(t_path *paths, int path_count, int total_ants) {
+	int min_turns = 1;
+	int max_turns = total_ants + longest_path_length(paths, path_count) - 1;
+	
+	while (min_turns < max_turns) {
+		int mid = (min_turns + max_turns) / 2;
+		
+		if (can_finish_in_turns(paths, path_count, total_ants, mid)) {
+			max_turns = mid;
+		} else {
+			min_turns = mid + 1;
 		}
-		prev = cur;
-		cur = cur->next;
 	}
+	return min_turns;
 }
 
 
-void add_path(t_path **paths, t_path add) {
-   static int capacity = 0;
-   static int count = 0;
-   
-   if (!*paths) {
-   	capacity = 2;
-   	count = 0;
-   	*paths = malloc(sizeof(t_path) * capacity);
-   	(*paths)[count] = add;
-   	count++;
-   	(*paths)[count] = (t_path){0};
-   }
-   else {
-   	// Check if we need more space
-   	if (count + 1 >= capacity) {
-   		capacity *= 2;
-   		t_path *new_paths = malloc(sizeof(t_path) * capacity);
-   		
-   		for (int i = 0; i < count; i++) {
-   			new_paths[i] = (*paths)[i];
-   		}
-   		
-   		free(*paths);
-   		*paths = new_paths;
-   	}
-   	
-   	(*paths)[count] = add;
-   	count++;
-   	(*paths)[count] = (t_path){0};
-   }
+void generate_path_sets(t_path *all_paths, t_path_set **valid_sets) {
+	int path_count = 0;
+	while (all_paths[path_count].len != 0) path_count++;
+	
+	for (int mask = 1; mask < (1 << path_count); mask++) {
+		t_path_set candidate;
+		candidate.paths = malloc(sizeof(t_path) * path_count);
+		candidate.count = 0;
+		
+		for (int i = 0; i < path_count; i++) {
+			if (mask & (1 << i)) {
+				candidate.paths[candidate.count] = all_paths[i];
+				candidate.count++;
+			}
+		}
+		
+		int valid = 1;
+		for (int i = 0; i < candidate.count && valid; i++) {
+			for (int j = i + 1; j < candidate.count && valid; j++) {
+				if (paths_conflict(candidate.paths[i], candidate.paths[j])) {
+					valid = 0;
+				}
+			}
+		}
+		
+		if (valid) {
+			add_path_set(valid_sets, candidate);
+		} else {
+			free(candidate.paths);
+		}
+	}
 }
 
-t_path get_path(t_room *room) {
-	int len = 0;
-	t_path path_struc;
-
-	t_list *path = ft_lstnew((t_room *)room);
-	for (t_room *cur = room->parent; cur != NULL; cur = cur->parent){
-		ft_lstadd_front(&path, ft_lstnew(cur));
-	}
-
-	for (t_list *cur = path; cur != NULL; cur = cur->next){
-		printf("path way: %s\n", ((t_room*)cur->content)->name);
-		len++;
-	}
-	printf("\n");
-
-	path_struc.len = len;
-	path_struc.path = path;
-	return path_struc;
-}
-
-
-
-
-void dfs(t_room *cur, t_farm *farm, t_list *visited, t_path **all_paths) {
-	t_list *neighbour = cur->connections;
-
-	if (cur->name == farm->end_room->name){
-		t_path path = get_path(cur);
-		add_path(all_paths, path);
-		return;
+void find_best_solution(t_farm *farm, t_path_set *valid_sets) {
+	int best_turns = INT_MAX;
+	t_path_set *best_set = NULL;
+	
+	for (int i = 0; valid_sets[i].count != 0; i++) {
+		int turns = calc_least_turns(valid_sets[i].paths, valid_sets[i].count, farm->ant_count);
+										   
+		if (turns < best_turns) {
+			best_turns = turns;
+			best_set = &valid_sets[i];
+		}
 	}
 	
-	while (neighbour) {
-		t_room *room = (t_room *)neighbour->content;
-		if (!is_visited(room, visited)) {
-			room->parent = cur;
-			ft_lstadd_back(&visited, ft_lstnew(room));
-			dfs(room, farm, visited, all_paths);
-			del_from_visited(room, &visited);
-		}
-		neighbour = neighbour->next;
-	}
+	printf("Best solution: %d turns using %d paths\n", best_turns, best_set->count);
 }
 
 void part1(t_farm *farm) {
@@ -118,8 +142,13 @@ void part1(t_farm *farm) {
 	t_list *queue = ft_lstnew((t_room *)start);
 	t_list *visited = ft_lstnew((t_room *)start);
 	t_path *all_paths = NULL;
+	t_path_set *valid_sets = NULL;
 	dfs(start, farm, visited, &all_paths);
+	generate_path_sets(all_paths, &valid_sets);
+	find_best_solution(farm, valid_sets);
 	// bfs(farm);
+
+	
 }
 
 int main(int argc, char **argv){

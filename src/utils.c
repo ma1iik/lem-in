@@ -36,11 +36,16 @@ void free_farm(t_farm *farm){
 }
 
 void store_input_lines(t_farm *farm, char *line){
-    char **new_lines = realloc(farm->input_lines, sizeof(char *) * (farm->line_count + 1));
+    char **new_lines = malloc(sizeof(char *) * (farm->line_count + 1));
     if (!new_lines)
         exit(1);
     
-    new_lines[farm->line_count] = ft_strdup(line);
+    for (int i = 0; i < farm->line_count; i++) {
+        new_lines[i] = farm->input_lines[i];
+    }
+
+	new_lines[farm->line_count] = ft_strdup(line);
+    free(farm->input_lines);
     farm->input_lines = new_lines;
     farm->line_count++;
 }

@@ -11,6 +11,7 @@ INCLUDES = -I$(INC_DIR) -I$(LIBFT_DIR)
 SRCS =	main.c \
 		parsing.c \
 		utils.c \
+		dfs.c \
 
 SRC_FILES = $(addprefix $(SRC_DIR)/, $(SRCS))
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
