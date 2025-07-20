@@ -69,23 +69,23 @@ void add_path(t_path **paths, t_path add) {
    }
 }
 
-t_path get_path(t_room *room) {
+t_path get_path(t_room *room, t_farm *farm) {
 	int len = 0;
 	t_path path_struc;
-
 	t_list *path = ft_lstnew((t_room *)room);
 	for (t_room *cur = room->parent; cur != NULL; cur = cur->parent){
 		ft_lstadd_front(&path, ft_lstnew(cur));
 	}
-
+	
 	for (t_list *cur = path; cur != NULL; cur = cur->next){
-		printf("path way: %s\n", ((t_room*)cur->content)->name);
+		printf("%s", ((t_room*)cur->content)->name);
 		len++;
 	}
-	printf("\n");
-
 	path_struc.len = len - 1;
 	path_struc.path = path;
+	path_struc.issues = 0;
+	path_struc.score = 0;
+	printf(" path len: %d\n", path_struc.len);
 	return path_struc;
 }
 
@@ -93,7 +93,7 @@ void dfs(t_room *cur, t_farm *farm, t_list *visited, t_path **all_paths) {
 	t_list *neighbour = cur->connections;
 
 	if (ft_strcmp(cur->name, farm->end_room->name) == 0){
-		t_path path = get_path(cur);
+		t_path path = get_path(cur, farm);
 		add_path(all_paths, path);
 		return;
 	}

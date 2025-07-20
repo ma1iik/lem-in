@@ -14,6 +14,8 @@ typedef struct s_room {
     int is_end;
     t_list *connections;
     struct s_room *parent;
+    int score;
+    int issues;
 } t_room;
 
 typedef struct s_farm {
@@ -27,6 +29,8 @@ typedef struct s_farm {
 
 typedef struct s_path {
     int len;
+    int score;
+    int issues;
     t_list *path;
 } t_path;
 
