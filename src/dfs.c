@@ -43,14 +43,13 @@ void add_path(t_path **paths, t_path add) {
    
    if (!*paths) {
    	capacity = 2;
-   	count = 0;
+   	count = 0; 
    	*paths = malloc(sizeof(t_path) * capacity);
    	(*paths)[count] = add;
    	count++;
    	(*paths)[count] = (t_path){0};
    }
    else {
-   	// Check if we need more space
    	if (count + 1 >= capacity) {
    		capacity *= 2;
    		t_path *new_paths = malloc(sizeof(t_path) * capacity);
@@ -69,7 +68,7 @@ void add_path(t_path **paths, t_path add) {
    }
 }
 
-t_path get_path(t_room *room, t_farm *farm) {
+t_path get_path(t_room *room) {
 	int len = 0;
 	t_path path_struc;
 	t_list *path = ft_lstnew((t_room *)room);
@@ -93,7 +92,7 @@ void dfs(t_room *cur, t_farm *farm, t_list *visited, t_path **all_paths) {
 	t_list *neighbour = cur->connections;
 
 	if (ft_strcmp(cur->name, farm->end_room->name) == 0){
-		t_path path = get_path(cur, farm);
+		t_path path = get_path(cur);
 		add_path(all_paths, path);
 		return;
 	}

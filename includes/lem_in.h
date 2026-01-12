@@ -29,7 +29,7 @@ typedef struct s_farm {
 
 typedef struct s_path {
     int len;
-    int score;
+    double score;
     int issues;
     t_list *path;
 } t_path;
