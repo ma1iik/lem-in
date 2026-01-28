@@ -197,10 +197,10 @@ void generate_path_set(t_path *all_paths, t_path_set *valid_set, t_farm *farm) {
 
 void part1(t_farm *farm) {
 	t_room *start = farm->start_room;
-	t_list *visited = ft_lstnew((t_room *)start);
 	t_path *all_paths = NULL;
 
-	dfs(start, farm, visited, &all_paths);
+	start->visited = 1;
+	dfs(start, farm, &all_paths);
 
 	t_path_set valid_set;
 	generate_path_set(all_paths, &valid_set, farm);

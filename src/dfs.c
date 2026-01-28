@@ -1,39 +1,15 @@
 #include "lem_in.h"
 
-int is_visited(t_room *neighbour, t_list *visited) {
-	if (!visited)
+int is_visited(t_room *neighbour) {
+	if (!neighbour)
 		return 0;
-
-	for (t_list *cur = visited; cur != NULL; cur = cur->next) {
-		if (cur->content == neighbour)
-			return 1;
-	}
-	return 0;
+	return neighbour->visited;
 }
 
-void del_from_visited(t_room *del, t_list **visited) {
-	if (!visited || !*visited)
+void del_from_visited(t_room *del) {
+	if (!del)
 		return;
-
-	if ((*visited)->content == del) {
-		t_list *to_delete = *visited;
-		*visited = (*visited)->next;
-		free(to_delete);
-		return;
-	}
-
-	t_list *prev = *visited;
-	t_list *cur = (*visited)->next;
-
-	while (cur) {
-		if (cur->content == del) {
-			prev->next = cur->next;
-			free(cur);
-			return;
-		}
-		prev = cur;
-		cur = cur->next;
-	}
+	del->visited = 0;
 }
 
 
@@ -88,7 +64,7 @@ t_path get_path(t_room *room) {
 	return path_struc;
 }
 
-void dfs(t_room *cur, t_farm *farm, t_list *visited, t_path **all_paths) {
+void dfs(t_room *cur, t_farm *farm, t_path **all_paths) {
 	t_list *neighbour = cur->connections;
 
 	if (ft_strcmp(cur->name, farm->end_room->name) == 0){
@@ -99,11 +75,11 @@ void dfs(t_room *cur, t_farm *farm, t_list *visited, t_path **all_paths) {
 	
 	while (neighbour) {
 		t_room *room = (t_room *)neighbour->content;
-		if (!is_visited(room, visited)) {
+		if (!is_visited(room)) {
 			room->parent = cur;
-			ft_lstadd_back(&visited, ft_lstnew(room));
-			dfs(room, farm, visited, all_paths);
-			del_from_visited(room, &visited);
+			room->visited = 1;
+			dfs(room, farm, all_paths);
+			del_from_visited(room);
 		}
 		neighbour = neighbour->next;
 	}

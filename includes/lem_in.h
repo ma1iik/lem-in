@@ -16,6 +16,7 @@ typedef struct s_room {
     struct s_room *parent;
     int score;
     int issues;
+    int visited;
 } t_room;
 
 typedef struct s_farm {
@@ -68,11 +69,11 @@ void		add_command(char *line, int *next_is_start, int *next_is_end);
 void		create_room(t_farm *farm, char *line, int next_is_start, int next_is_end);
 t_farm		*parse_input(void);
 
-int         is_visited(t_room *neighbour, t_list *visited);
-void        del_from_visited(t_room *del, t_list **visited);
+int         is_visited(t_room *neighbour);
+void        del_from_visited(t_room *del);
 void        add_path(t_path **paths, t_path add);
 t_path      get_path(t_room *room);
-void        dfs(t_room *cur, t_farm *farm, t_list *visited, t_path **all_paths);
+void        dfs(t_room *cur, t_farm *farm, t_path **all_paths);
 
 
 

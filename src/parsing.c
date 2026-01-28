@@ -208,6 +208,7 @@ void create_room(t_farm *farm, char* line, int next_is_start, int next_is_end) {
 	room->is_end = 0;
 	room->connections = NULL;
 	room->parent = NULL;
+	room->visited = 0;
 	if (next_is_start){
 		room->is_start = 1;
 		farm->start_room = room;
