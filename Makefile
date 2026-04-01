@@ -1,6 +1,7 @@
 CC =gcc
 CFLAGS = -Wall -Werror -Wextra -Wno-unused-variable -g -std=c99
 NAME = lem-in
+VISUALIZER_DIR = visualizer
 
 SRC_DIR = src
 OBJ_DIR = obj
@@ -11,7 +12,9 @@ INCLUDES = -I$(INC_DIR) -I$(LIBFT_DIR)
 SRCS =	main.c \
 		parsing.c \
 		utils.c \
-		dfs.c \
+		pathfinding.c \
+		path_scoring.c \
+		ant_movement.c \
 
 SRC_FILES = $(addprefix $(SRC_DIR)/, $(SRCS))
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
@@ -19,38 +22,34 @@ OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
 LIBFT = $(LIBFT_DIR)/libft.a
 LIBFT_FLAGS = -L$(LIBFT_DIR) -lft
 
-GREEN = \033[0;32m
-RED = \033[0;31m
-NC = \033[0m
-
-all : $(NAME)
+all : $(NAME) visu-hex
 
 $(NAME) : $(LIBFT) $(OBJS)
-	@echo "$(GREEN)Linking $(NAME)...$(NC)"
 	$(CC) $(OBJS) $(LIBFT_FLAGS) -o $(NAME)
-	@echo "$(GREEN)✅ $(NAME) created successfully!$(NC)"
+
+visu-hex:
+	@$(MAKE) -s -C $(VISUALIZER_DIR) all
+	@cp $(VISUALIZER_DIR)/visu-hex .
 
 $(LIBFT):
-	@echo "$(GREEN)Building Libft...$(NC)"
-	@make -C $(LIBFT_DIR)
-	@make -C $(LIBFT_DIR) bonus
+	@$(MAKE) -s -C $(LIBFT_DIR)
+	@$(MAKE) -s -C $(LIBFT_DIR) bonus
 
 $(OBJ_DIR):
 	@mkdir -p $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	@echo "Compiling $<..."
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	@echo "$(RED)Cleaning objects...$(NC)"
-	@make -C $(LIBFT_DIR) clean
+	@$(MAKE) -s -C $(LIBFT_DIR) clean
+	@$(MAKE) -s -C $(VISUALIZER_DIR) clean
 	@rm -rf $(OBJ_DIR)
 
 fclean: clean
-	@echo "$(RED)Cleaning $(NAME) and Libft...$(NC)"
-	@make -C $(LIBFT_DIR) fclean
-	@rm -f $(NAME)
+	@$(MAKE) -s -C $(LIBFT_DIR) fclean
+	@$(MAKE) -s -C $(VISUALIZER_DIR) fclean
+	@rm -f $(NAME) visu-hex
 
 re: fclean all
 

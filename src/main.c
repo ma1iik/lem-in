@@ -1,274 +1,98 @@
 #include "lem_in.h"
 
-int paths_conflict(t_path *path1, t_path *path2) {
-	t_list *p1 = path1->path;
-	
-	while (p1) {
-		t_room *room1 = (t_room *)p1->content;
-		
-		if (room1->is_start || room1->is_end) {
-			p1 = p1->next;
-			continue;
-		}
-		
-		t_list *p2 = path2->path;
-		while (p2) {
-			t_room *room2 = (t_room *)p2->content;
-			if (room1 == room2) return 1;
-			p2 = p2->next;
-		}
-		p1 = p1->next;
+
+static t_path	*lst_to_arr(t_list *lst, int *n)
+{
+	t_path	*arr;
+	t_list	*cur;
+	int		i;
+
+	*n = ft_lstsize(lst);
+	if (*n == 0)
+		return (NULL);
+	arr = malloc(sizeof(t_path) * *n);
+	if (!arr)
+		return (NULL);
+	cur = lst;
+	i = 0;
+	while (cur)
+	{
+		arr[i] = *((t_path *)cur->content);
+		cur = cur->next;
+		i++;
 	}
-	return 0;
+	return (arr);
 }
 
-void count_issues(t_path *path1, t_path *path2) {
-	t_list *p1 = path1->path;
-	
-	while (p1) {
-		t_room *room1 = (t_room *)p1->content;
-		
-		if (room1->is_start || room1->is_end) {
-			p1 = p1->next;
-			continue;
-		}
-		
-		t_list *p2 = path2->path;
-		while (p2) {
-			t_room *room2 = (t_room *)p2->content;
-			if (room1 == room2){
-				printf("    Conflict: room %s\n", room1->name);
-				path1->issues++;
-				path2->issues++;
-				break;
-			}
-			p2 = p2->next;
-		}
-		p1 = p1->next;
-	}
+static int	eval_strat(t_path *paths, int n, int ants, t_path_set *out, t_strategy strat)
+{
+	count_issues(paths, n);
+	pick_path_set(paths, n, out, strat);
+	return (min_turns(out->paths, out->count, ants));
 }
 
-int can_finish_in_turns(t_path *paths, int path_count, int total_ants, int target_turns) {
-	int ants_placed = 0;
-	
-	for (int i = 0; i < path_count; i++) {
-		int max_ants_on_path = target_turns - paths[i].len + 1;
-		
-		if (max_ants_on_path <= 0) continue;
-		
-		int ants_to_use = (max_ants_on_path > total_ants - ants_placed) ? total_ants - ants_placed : max_ants_on_path;
-		ants_placed += ants_to_use;
-		
-		if (ants_placed >= total_ants) return 1;
-	}
-	return 0;
-}
+int	main(int argc, char **argv)
+{
+	t_farm		*farm;
+	t_list		*disj_lst;
+	t_list		*all_lst;
+	t_path		*disj_arr;
+	t_path		*all_arr;
+	int			paths_num_meth1;
+	int			paths_num_meth2;
+	t_path_set	bfs_set;
+	t_path_set	dfs_set;
+	t_path_set	*best;
+	int			bfs_t;
+	int			dfs_t;
 
-int longest_path_length(t_path *paths, int path_count) {
-	int longest = 0;
-	for (int i = 0; i < path_count; i++) {
-		if (paths[i].len > longest)
-			longest = paths[i].len;
-	}
-	return longest;
-}
-
-void add_path_set(t_path_set *valid_sets, t_path_set candidate) {
-	static int set_count = 0;
-	static int set_capacity = 0;
-	
-	if (!valid_sets) {
-		set_capacity = 2;
-		set_count = 0;
-		valid_sets = malloc(sizeof(t_path_set) * set_capacity);
-	}
-	else if (set_count + 1 >= set_capacity) {
-		set_capacity *= 2;
-		t_path_set *new_sets = malloc(sizeof(t_path_set) * set_capacity);
-		for (int i = 0; i < set_count; i++) {
-			new_sets[i] = (valid_sets)[i];
-		}
-		free(valid_sets);
-		valid_sets = new_sets;
-	}
-	
-	(valid_sets)[set_count] = candidate;
-	set_count++;
-	(valid_sets)[set_count] = (t_path_set){NULL, 0};
-}
-
-int calc_least_turns(t_path *paths, int path_count, int total_ants) {
-	int min_turns = 1;
-	int max_turns = total_ants + longest_path_length(paths, path_count) - 1;
-	
-	while (min_turns < max_turns) {
-		int mid = (min_turns + max_turns) / 2;
-		
-		if (can_finish_in_turns(paths, path_count, total_ants, mid)) {
-			max_turns = mid;
-		} else {
-			min_turns = mid + 1;
-		}
-	}
-	return min_turns;
-}
-
-void assign_scores(t_path *all_paths, t_farm *farm) {
-    int i = 0;
-    while (all_paths[i].path != NULL) {
-        // Base score: estimated turns if using this path alone
-        int turns_alone = farm->ant_count + all_paths[i].len - 1;
-        
-        // Heavy penalty for conflicts (makes path less attractive)
-        double conflict_penalty = (double)all_paths[i].issues * 3.0;
-        
-        // Bonus for longer paths (they can handle more ants in parallel)
-        double length_bonus = 0.0;
-        if (all_paths[i].len > 3) {
-            length_bonus = -((double)(all_paths[i].len - 3) * 1.5);
-        }
-        
-        all_paths[i].score = (double)turns_alone + conflict_penalty + length_bonus;
-        i++;
-    }
-}
-
-void generate_path_set(t_path *all_paths, t_path_set *valid_set, t_farm *farm) {
-   (void)farm;
-   int path_count = 0;
-
-   while (all_paths[path_count].path != NULL)	path_count++;
-
-   // calc all path issues
-	for(int i = 0; i < path_count; i++) {
-		all_paths[i].issues = 0;
-	}
-	for(int i = 0; i < path_count; i++) {
-		for(int j = i + 1; j < path_count; j++)
-			count_issues(&all_paths[i], &all_paths[j]);
-	}
-   assign_scores(all_paths, farm);
-
-   // Sort by length (short first)
-   for (int i = 0; i < path_count - 1; i++) {
-   	for (int j = 0; j < path_count - i - 1; j++) {
-   		if (all_paths[j].len > all_paths[j + 1].len) {
-   			t_path temp = all_paths[j];
-   			all_paths[j] = all_paths[j + 1];
-   			all_paths[j + 1] = temp;
-   		}
-   	}
-   }
-
-   t_path *selected_paths = malloc(sizeof(t_path) * path_count);
-   int num_selected = 0;
-
-   for (int i = 0; i < path_count; i++) {
-   	t_path *cur = &all_paths[i];
-   	int cross = -1;
-   	
-   	printf("Current path: len=%d, score=%.1f\n", cur->len, cur->score);
-
-   	for (int j = 0; j < num_selected; j++){
-   		if (paths_conflict(cur, &selected_paths[j])) {
-   			cross = j;
-   			break;
-   		}
-   	}
-
-   	if (cross == -1){
-   		selected_paths[num_selected] = *cur;
-   		num_selected++;
-   	}
-   	else {
-   		printf("  Conflicts with path: len=%d, score=%.1f\n", 
-       selected_paths[cross].len, selected_paths[cross].score);
-   		if (cur->score < selected_paths[cross].score) {
-   			printf("  -> Replacing!\n");
-   			selected_paths[cross] = *cur;
-   		} else {
-   			printf("  -> Keeping existing\n");
-   		}
-   	}
-   }
-   valid_set->count = num_selected;
-   valid_set->paths = selected_paths;
-}
-
-void part1(t_farm *farm) {
-	t_room *start = farm->start_room;
-	t_path *all_paths = NULL;
-
-	start->visited = 1;
-	dfs(start, farm, &all_paths);
-
-	t_path_set valid_set;
-	generate_path_set(all_paths, &valid_set, farm);
-
-	if (valid_set.count > 0) {
-		int turns = calc_least_turns(valid_set.paths, valid_set.count, farm->ant_count);
-		printf("Best solution: %d turns using %d paths\n", turns, valid_set.count);
-	} else {
-		printf("No valid paths found\n");
-	}
-	// bfs(farm);
-}
-
-int main(int argc, char **argv){
+	bfs_set.paths = NULL;
+	bfs_set.count = 0;
+	dfs_set.paths = NULL;
+	dfs_set.count = 0;
 	(void)argv;
-	if (argc != 1){
-		ft_printf("ERROR: No arguments allowed\n");
-		return 1;
+	if (argc != 1)
+	{
+		ft_printf("ERROR\n");
+		return (1);
 	}
-	// if (isatty(0)) {
-	// 	ft_printf("Usage: %s < input_file.map\n", argv[0]);
-	// 	ft_printf("   or: echo \"input\" | %s\n", argv[0]);
-	// 	return 1;
-	// }
-	t_farm *farm = parse_input();
-	if (!farm)
-		exit(0);
-	part1(farm);
-	return 0;
+	farm = parse_input();
+	if (!farm || !farm->start_room || !farm->end_room)
+	{
+		ft_printf("ERROR\n");
+		exit(1);
+	}
+	disj_lst = get_disj_paths(farm);
+	disj_arr = lst_to_arr(disj_lst, &paths_num_meth1);
+	ft_lstclear(&disj_lst, free);
+	all_lst = get_all_paths(farm);
+	all_arr = lst_to_arr(all_lst, &paths_num_meth2);
+	ft_lstclear(&all_lst, free);
+	if ((!disj_arr || paths_num_meth1 == 0) && (!all_arr || paths_num_meth2 == 0))
+	{
+		free_paths_arr(disj_arr, paths_num_meth1);
+		free_paths_arr(all_arr, paths_num_meth2);
+		free_farm(farm);
+		ft_printf("ERROR\n");
+		exit(1);
+	}
+	bfs_t = INT_MAX;
+	dfs_t = INT_MAX;
+	if (disj_arr && paths_num_meth1 > 0)
+		bfs_t = eval_strat(disj_arr, paths_num_meth1, farm->ant_count, &bfs_set, STRATEGY_SHORTEST);
+	if (all_arr && paths_num_meth2 > 0)
+		dfs_t = eval_strat(all_arr, paths_num_meth2, farm->ant_count, &dfs_set, STRATEGY_LEAST_CONFLICTS);
+	if (bfs_t <= dfs_t)
+		best = &bfs_set;
+	else
+		best = &dfs_set;
+	dump_input(farm);
+	ft_printf("\n");
+	run_ants(best, farm->ant_count);
+	free_paths_arr(disj_arr, paths_num_meth1);
+	free_paths_arr(all_arr, paths_num_meth2);
+	free(bfs_set.paths);
+	free(dfs_set.paths);
+	free_farm(farm);
+	return (0);
 }
-
-
-
-// void bfs(t_farm *farm) {
-// 	t_room *start = farm->start_room;
-// 	t_list *queue = ft_lstnew((t_room *)start);
-// 	t_list *visited = ft_lstnew((t_room *)start);
-// 	t_path **paths = NULL;
-	
-// 	while (queue != NULL) {			
-// 		t_room *current = queue->content;
-// 		t_list *tmp = NULL;
-// 		if (queue->next != NULL)
-// 			tmp = queue->next;
-		
-// 		// free(queue->content);
-// 		// free(queue->next);
-// 		free(queue);
-
-// 		queue = tmp;
-
-// 		t_list *neighbours = current->connections;
-// 		for(t_list *neighbour = neighbours; neighbour != NULL; neighbour = neighbour->next){
-// 			t_room *neighbour_r = neighbour->content;
-// 			if (!is_visited(neighbour_r, visited)) {
-// 				neighbour_r->parent = current;
-// 				ft_lstadd_back(&visited, ft_lstnew(neighbour_r));
-
-// 				if (farm->end_room->name == neighbour_r->name) {
-// 					printf("End is %s\n", farm->end_room->name);
-// 					t_path *path = get_path(neighbour_r);
-// 					paths = add_path(paths, path);
-
-// 				}
-// 				else
-// 					ft_lstadd_back(&queue, ft_lstnew(neighbour_r));
-					
-// 			}
-// 		}
-// 	}
-// }

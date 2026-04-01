@@ -17,6 +17,7 @@ typedef struct s_room {
     int score;
     int issues;
     int visited;
+    int in_queue;
 } t_room;
 
 typedef struct s_farm {
@@ -50,31 +51,39 @@ typedef enum e_line_type {
     LINE_INVALID
 } t_line_type;
 
-void        store_input_lines(t_farm *farm, char *line);
+typedef enum e_strategy {
+    STRATEGY_SHORTEST,
+    STRATEGY_LEAST_CONFLICTS
+} t_strategy;
+
+void        save_line(t_farm *farm, char *line);
 void        free_farm(t_farm *farm);
+void        dump_input(t_farm *farm);
 void        free_rooms(t_list *rooms);
-void        free_single_room(t_room *room);
+void        free_room(t_room *room);
 int         is_valid_num(char *str);
 char        *trim_newline(char *str);
 
 t_farm		*init_farm(void);
-int			is_room_name_format(char *name);
-int			is_link_format(char *line);
-int			is_room_format(char *line);
-t_line_type	get_line_type(char *line, int *passing_phase);
-t_room		*find_room_by_name(t_farm *farm, char *name);
-int			room_already_connected(t_room *room1, t_room *room2);
-int			create_link(t_farm *farm, char *line);
-void		add_command(char *line, int *next_is_start, int *next_is_end);
-void		create_room(t_farm *farm, char *line, int next_is_start, int next_is_end);
+int			valid_room_name(char *name);
+int			valid_link(char *line);
+int			valid_room_line(char *line);
+t_line_type	line_kind(char *line, int *phase);
+t_room		*room_by_name(t_farm *farm, char *name);
+int			already_linked(t_room *r1, t_room *r2);
+int			add_link(t_farm *farm, char *line);
+void		parse_cmd(char *line, int *next_start, int *next_end);
+void		add_room(t_farm *farm, char *line, int next_start, int next_end);
 t_farm		*parse_input(void);
 
-int         is_visited(t_room *neighbour);
-void        del_from_visited(t_room *del);
-void        add_path(t_path **paths, t_path add);
-t_path      get_path(t_room *room);
-void        dfs(t_room *cur, t_farm *farm, t_path **all_paths);
-
-
+t_list		*get_all_paths(t_farm *farm);
+t_list		*get_disj_paths(t_farm *farm);
+int			paths_conflict(t_path *p1, t_path *p2);
+void		count_issues(t_path *paths, int n);
+int			fits_turns(t_path *paths, int n, int ants, int turns);
+int			max_path_len(t_path *paths, int n);
+int			min_turns(t_path *paths, int n, int ants);
+void		pick_path_set(t_path *paths, int n, t_path_set *out, t_strategy strat);
+void		run_ants(t_path_set *set, int ants);
 
 #endif
