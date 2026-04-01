@@ -1,5 +1,5 @@
 CC =gcc
-CFLAGS = -Wall -Werror -Wextra -Wno-unused-variable -g -std=c99
+CFLAGS = -Wall -Werror -Wextra -Wno-unused-variable -fsanitize=address -g -std=c99
 NAME = lem-in
 VISUALIZER_DIR = visualizer
 
@@ -25,7 +25,7 @@ LIBFT_FLAGS = -L$(LIBFT_DIR) -lft
 all : $(NAME) visu-hex
 
 $(NAME) : $(LIBFT) $(OBJS)
-	$(CC) $(OBJS) $(LIBFT_FLAGS) -o $(NAME)
+	$(CC) $(OBJS) $(LIBFT_FLAGS) -fsanitize=address -o $(NAME)
 
 visu-hex:
 	@$(MAKE) -s -C $(VISUALIZER_DIR) all

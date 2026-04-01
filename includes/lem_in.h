@@ -63,6 +63,9 @@ void        free_rooms(t_list *rooms);
 void        free_room(t_room *room);
 int         is_valid_num(char *str);
 char        *trim_newline(char *str);
+void	    free_paths_arr(t_path *arr, int n);
+void	    free_path_list(t_list *lst);
+
 
 t_farm		*init_farm(void);
 int			valid_room_name(char *name);
@@ -73,7 +76,7 @@ t_room		*room_by_name(t_farm *farm, char *name);
 int			already_linked(t_room *r1, t_room *r2);
 int			add_link(t_farm *farm, char *line);
 void		parse_cmd(char *line, int *next_start, int *next_end);
-void		add_room(t_farm *farm, char *line, int next_start, int next_end);
+int		    add_room(t_farm *farm, char *line, int next_start, int next_end);
 t_farm		*parse_input(void);
 
 t_list		*get_all_paths(t_farm *farm);
