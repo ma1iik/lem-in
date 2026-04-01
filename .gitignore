@@ -2,3 +2,4 @@
 *.pdf
 lem-in-asan
 lem-in-asan.dSYM
+.DS_Store
