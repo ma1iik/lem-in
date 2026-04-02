@@ -22,7 +22,9 @@ OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
 LIBFT = $(LIBFT_DIR)/libft.a
 LIBFT_FLAGS = -L$(LIBFT_DIR) -lft
 
-all : $(NAME) visu-hex
+all : $(NAME)
+
+bonus: $(NAME) visu-hex
 
 $(NAME) : $(LIBFT) $(OBJS)
 	$(CC) $(OBJS) $(LIBFT_FLAGS) -fsanitize=address -o $(NAME)
@@ -53,4 +55,4 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all bonus clean fclean re

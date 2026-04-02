@@ -13,7 +13,7 @@ Eta 7 6
 Theta 9 7
 Iota 11 5
 Kappa 4 5
-Kambda 5 6
+Lambda 5 6
 Mu 8 7
 Nu 10 6
 Start-Alpha
@@ -25,14 +25,14 @@ Delta-Epsilon
 Epsilon-Zeta
 Zeta-End
 Alpha-Kappa
-Kappa-Kambda
-Kambda-Gamma
+Kappa-Lambda
+Lambda-Gamma
 Delta-Mu
 Mu-Eta
 Eta-Theta
 Theta-Iota
 Iota-End
 Kappa-Gamma
-Kambda-Theta
+Lambda-Theta
 Mu-Nu
 Nu-End
