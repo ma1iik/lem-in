@@ -22,7 +22,6 @@ char	*first_line(int fd, char *saveline)
 		return (NULL);
 	byte_read = 1;
 	
-	// Initialize saveline if it's NULL
 	if (!saveline)
 	{
 		saveline = malloc(1);
@@ -40,13 +39,13 @@ char	*first_line(int fd, char *saveline)
 		if (byte_read <= -1)
 		{
 			free(buf);
-			free(saveline);  // Don't leak memory
+			free(saveline);
 			return (NULL);
 		}
 		buf[byte_read] = '\0';
 		char *temp = saveline;
 		saveline = ft_strjoin(saveline, buf);
-		free(temp);  // Free the old saveline
+		free(temp);
 		if (!saveline)
 		{
 			free(buf);

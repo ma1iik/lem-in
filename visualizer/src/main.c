@@ -1,8 +1,5 @@
 #include "visualizer.h"
 
-/*
-** Initialize SDL and create window
-*/
 static int init_sdl(t_visualizer *vis)
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -38,16 +35,13 @@ static int init_sdl(t_visualizer *vis)
     return (1);
 }
 
-/*
-** Handle keyboard input
-*/
 static void handle_keydown(t_visualizer *vis, SDL_Keycode key)
 {
     switch (key)
     {
         case SDLK_r:
             reset_animation(vis);
-            vis->paused = 0;  /* Auto-play after restart */
+            vis->paused = 0;
             break;
         case SDLK_ESCAPE:
         case SDLK_q:
@@ -58,9 +52,6 @@ static void handle_keydown(t_visualizer *vis, SDL_Keycode key)
     }
 }
 
-/*
-** Process SDL events
-*/
 static void handle_events(t_visualizer *vis)
 {
     SDL_Event event;
@@ -79,9 +70,6 @@ static void handle_events(t_visualizer *vis)
     }
 }
 
-/*
-** Cleanup and free resources
-*/
 static void cleanup(t_visualizer *vis)
 {
     if (vis->ants)
@@ -104,9 +92,6 @@ static void print_controls(void)
     printf("========================\n\n");
 }
 
-/*
-** Main function
-*/
 int main(int argc, char **argv)
 {
     t_visualizer vis;
@@ -115,19 +100,16 @@ int main(int argc, char **argv)
     float delta_time;
     const char *filename;
 
-    /* Check arguments - if no arg, read from stdin (for piping on Linux) */
     if (argc >= 2)
         filename = argv[1];
     else
-        filename = NULL;  /* Will read from stdin */
+        filename = NULL;
 
-    /* Initialize visualizer struct */
     memset(&vis, 0, sizeof(t_visualizer));
     vis.speed = ANIMATION_SPEED;
-    vis.paused = 0;  /* Auto-play */
+    vis.paused = 0;
     vis.running = 1;
 
-    /* Parse input from file or stdin */
     vis.farm = parse_input(filename);
     if (!vis.farm || vis.farm->room_count == 0)
     {
@@ -149,7 +131,6 @@ int main(int argc, char **argv)
         return (1);
     }
 
-    /* Initialize SDL */
     if (!init_sdl(&vis))
     {
         free(vis.farm);
@@ -158,37 +139,28 @@ int main(int argc, char **argv)
 
     print_controls();
 
-    /* Calculate positions */
     calculate_scale(vis.farm);
 
-    /* Initialize animation */
     init_ant_states(&vis);
     if (vis.farm->turn_count > 0)
         apply_turn(&vis);
 
-    /* Main loop */
     last_time = SDL_GetTicks();
     while (vis.running)
     {
-        /* Calculate delta time */
         current_time = SDL_GetTicks();
         delta_time = (current_time - last_time) / 1000.0f;
         last_time = current_time;
 
-        /* Handle events */
         handle_events(&vis);
 
-        /* Update animation */
         update_animation(&vis, delta_time);
 
-        /* Render */
         render_frame(&vis);
 
-        /* Cap frame rate */
         SDL_Delay(1000 / FPS);
     }
 
-    /* Cleanup */
     cleanup(&vis);
     return (0);
 }

@@ -1,8 +1,5 @@
 #include "visualizer.h"
 
-/*
-** Draw a circle outline using midpoint circle algorithm
-*/
 void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius)
 {
     int x = radius - 1;
@@ -37,9 +34,6 @@ void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius)
     }
 }
 
-/*
-** Draw a filled circle
-*/
 void draw_filled_circle(SDL_Renderer *renderer, int cx, int cy, int radius)
 {
     int x, y;
@@ -55,9 +49,6 @@ void draw_filled_circle(SDL_Renderer *renderer, int cx, int cy, int radius)
     }
 }
 
-/*
-** Calculate minimum distance between any two connected rooms (in screen coords)
-*/
 static float calc_min_link_distance(t_vfarm *farm)
 {
     float min_dist = 999999.0f;
@@ -80,9 +71,6 @@ static float calc_min_link_distance(t_vfarm *farm)
     return min_dist;
 }
 
-/*
-** Calculate scale and offset to fit all rooms in window
-*/
 void calculate_scale(t_vfarm *farm)
 {
     int min_x, max_x, min_y, max_y;
@@ -94,7 +82,6 @@ void calculate_scale(t_vfarm *farm)
     if (farm->room_count == 0)
         return;
 
-    /* Find bounding box */
     min_x = max_x = farm->rooms[0].x;
     min_y = max_y = farm->rooms[0].y;
 
@@ -112,7 +99,6 @@ void calculate_scale(t_vfarm *farm)
         i++;
     }
 
-    /* Calculate scale */
     range_x = max_x - min_x;
     range_y = max_y - min_y;
 
@@ -126,13 +112,11 @@ void calculate_scale(t_vfarm *farm)
 
     farm->scale = (scale_x < scale_y) ? scale_x : scale_y;
 
-    /* Calculate offset to center */
     farm->offset_x = PADDING + ((WIN_WIDTH - 2 * PADDING) - range_x * farm->scale) / 2
                      - min_x * farm->scale;
     farm->offset_y = PADDING + 40 + ((WIN_HEIGHT - 2 * PADDING - 80) - range_y * farm->scale) / 2
                      - min_y * farm->scale;
 
-    /* Calculate draw positions for each room */
     i = 0;
     while (i < farm->room_count)
     {
@@ -141,27 +125,20 @@ void calculate_scale(t_vfarm *farm)
         i++;
     }
 
-    /* Calculate adaptive room radius based on minimum link distance */
     min_dist = calc_min_link_distance(farm);
     
-    /* Room radius should be less than half the minimum distance between connected rooms */
     farm->room_radius = (int)(min_dist * 0.35f);
     
-    /* Clamp to reasonable values */
     if (farm->room_radius > MAX_ROOM_RADIUS)
         farm->room_radius = MAX_ROOM_RADIUS;
     if (farm->room_radius < MIN_ROOM_RADIUS)
         farm->room_radius = MIN_ROOM_RADIUS;
     
-    /* Ant radius is proportional to room radius */
     farm->ant_radius = farm->room_radius * 2 / 5;
     if (farm->ant_radius < 2)
         farm->ant_radius = 2;
 }
 
-/*
-** Draw a thick line between two points
-*/
 static void draw_thick_line(SDL_Renderer *renderer, int x1, int y1, int x2, int y2, int thickness)
 {
     float dx = x2 - x1;
@@ -173,11 +150,9 @@ static void draw_thick_line(SDL_Renderer *renderer, int x1, int y1, int x2, int 
     if (len == 0)
         return;
 
-    /* Normalized perpendicular vector */
     nx = -dy / len;
     ny = dx / len;
 
-    /* Draw multiple parallel lines */
     for (i = -thickness / 2; i <= thickness / 2; i++)
     {
         SDL_RenderDrawLine(renderer,
@@ -186,9 +161,6 @@ static void draw_thick_line(SDL_Renderer *renderer, int x1, int y1, int x2, int 
     }
 }
 
-/*
-** Draw all links between rooms
-*/
 static void draw_links(t_visualizer *vis)
 {
     int i;
@@ -198,7 +170,6 @@ static void draw_links(t_visualizer *vis)
 
     farm = vis->farm;
     
-    /* Link thickness based on room density */
     thickness = farm->room_radius / 3;
     if (thickness < 1)
         thickness = 1;
@@ -234,9 +205,6 @@ static void draw_links(t_visualizer *vis)
     }
 }
 
-/*
-** Draw all rooms
-*/
 static void draw_rooms(t_visualizer *vis)
 {
     int i;
@@ -247,20 +215,17 @@ static void draw_rooms(t_visualizer *vis)
     farm = vis->farm;
     radius = farm->room_radius;
     
-    /* Start/end rooms should always be visible - minimum 8 pixels */
     special_radius = radius * 2;
     if (special_radius < 8)
         special_radius = 8;
     if (special_radius > 25)
         special_radius = 25;
 
-    /* First pass: draw normal rooms */
     i = 0;
     while (i < farm->room_count)
     {
         if (!farm->rooms[i].is_start && !farm->rooms[i].is_end)
         {
-            /* Brighter color for normal rooms */
             SDL_SetRenderDrawColor(vis->renderer, 140, 140, 160, 255);
             draw_filled_circle(vis->renderer,
                               (int)farm->rooms[i].draw_x,
@@ -270,19 +235,16 @@ static void draw_rooms(t_visualizer *vis)
         i++;
     }
 
-    /* Second pass: draw start/end rooms on top (so they're always visible) */
     i = 0;
     while (i < farm->room_count)
     {
         if (farm->rooms[i].is_start)
         {
-            /* Bright green for start */
             SDL_SetRenderDrawColor(vis->renderer, 50, 255, 100, 255);
             draw_filled_circle(vis->renderer,
                               (int)farm->rooms[i].draw_x,
                               (int)farm->rooms[i].draw_y,
                               special_radius);
-            /* White outline */
             SDL_SetRenderDrawColor(vis->renderer, 255, 255, 255, 255);
             draw_circle(vis->renderer,
                        (int)farm->rooms[i].draw_x,
@@ -291,13 +253,11 @@ static void draw_rooms(t_visualizer *vis)
         }
         else if (farm->rooms[i].is_end)
         {
-            /* Bright red for end */
             SDL_SetRenderDrawColor(vis->renderer, 255, 80, 80, 255);
             draw_filled_circle(vis->renderer,
                               (int)farm->rooms[i].draw_x,
                               (int)farm->rooms[i].draw_y,
                               special_radius);
-            /* White outline */
             SDL_SetRenderDrawColor(vis->renderer, 255, 255, 255, 255);
             draw_circle(vis->renderer,
                        (int)farm->rooms[i].draw_x,
@@ -308,12 +268,8 @@ static void draw_rooms(t_visualizer *vis)
     }
 }
 
-/*
-** Generate a color for an ant based on its ID
-*/
 static void get_ant_color(int ant_id, Uint8 *r, Uint8 *g, Uint8 *b)
 {
-    /* Generate distinct colors using golden ratio */
     float hue = (float)((ant_id * 137) % 360) / 360.0f;
     float sat = 0.7f;
     float val = 0.9f;
@@ -340,9 +296,6 @@ static void get_ant_color(int ant_id, Uint8 *r, Uint8 *g, Uint8 *b)
     *b = (Uint8)(b_f * 255);
 }
 
-/*
-** Draw all ants
-*/
 static void draw_ants(t_visualizer *vis)
 {
     int i;
@@ -352,7 +305,6 @@ static void draw_ants(t_visualizer *vis)
     if (!vis->ants)
         return;
 
-    /* Ants should be visible - minimum 4 pixels */
     radius = vis->farm->ant_radius;
     if (radius < 4)
         radius = 4;
@@ -368,7 +320,6 @@ static void draw_ants(t_visualizer *vis)
                               (int)vis->ants[i].x,
                               (int)vis->ants[i].y,
                               radius);
-            /* Add white outline for visibility */
             SDL_SetRenderDrawColor(vis->renderer, 255, 255, 255, 255);
             draw_circle(vis->renderer,
                        (int)vis->ants[i].x,
@@ -379,14 +330,10 @@ static void draw_ants(t_visualizer *vis)
     }
 }
 
-/*
-** Draw UI elements (turn counter, controls info)
-*/
 static void draw_ui(t_visualizer *vis)
 {
     SDL_Rect bar;
 
-    /* Draw top bar background */
     SDL_SetRenderDrawColor(vis->renderer, 40, 40, 50, 255);
     bar.x = 0;
     bar.y = 0;
@@ -395,22 +342,16 @@ static void draw_ui(t_visualizer *vis)
     SDL_RenderFillRect(vis->renderer, &bar);
 }
 
-/*
-** Main render function
-*/
 void render_frame(t_visualizer *vis)
 {
-    /* Clear screen */
     SDL_SetRenderDrawColor(vis->renderer, COLOR_BG_R, COLOR_BG_G, 
                            COLOR_BG_B, 255);
     SDL_RenderClear(vis->renderer);
 
-    /* Draw scene */
     draw_links(vis);
     draw_rooms(vis);
     draw_ants(vis);
     draw_ui(vis);
 
-    /* Present */
     SDL_RenderPresent(vis->renderer);
 }

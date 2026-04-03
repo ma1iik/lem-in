@@ -1,8 +1,5 @@
 #include "visualizer.h"
 
-/*
-** Find room index by name
-*/
 int find_room_index(t_vfarm *farm, const char *name)
 {
     int i;
@@ -17,9 +14,6 @@ int find_room_index(t_vfarm *farm, const char *name)
     return (-1);
 }
 
-/*
-** Check if line is a room definition (name x y)
-*/
 static int is_room_line(const char *line)
 {
     int spaces;
@@ -35,7 +29,6 @@ static int is_room_line(const char *line)
             spaces++;
         if (line[i] == '-' && i > 0 && line[i - 1] != ' ')
         {
-            /* Check if this looks like a link (no spaces) */
             int has_space = 0;
             int j = 0;
             while (line[j])
@@ -52,9 +45,6 @@ static int is_room_line(const char *line)
     return (spaces == 2);
 }
 
-/*
-** Check if line is a link (room1-room2)
-*/
 static int is_link_line(const char *line)
 {
     int i;
@@ -77,20 +67,13 @@ static int is_link_line(const char *line)
     return (has_dash && !has_space);
 }
 
-/*
-** Check if line is a movement line (starts with L)
-*/
 static int is_move_line(const char *line)
 {
     if (!line || line[0] != 'L')
         return (0);
-    /* Check for Lx-y pattern */
     return (strchr(line, '-') != NULL);
 }
 
-/*
-** Parse a room line: name x y
-*/
 static void parse_room(t_vfarm *farm, const char *line, int is_start, int is_end)
 {
     char name[MAX_NAME_LEN];
@@ -100,26 +83,22 @@ static void parse_room(t_vfarm *farm, const char *line, int is_start, int is_end
     if (farm->room_count >= MAX_ROOMS)
         return;
 
-    /* Parse name (up to first space) */
     i = 0;
     j = 0;
     while (line[i] && line[i] != ' ' && j < MAX_NAME_LEN - 1)
         name[j++] = line[i++];
     name[j] = '\0';
 
-    /* Skip space and parse x */
     while (line[i] == ' ')
         i++;
     x = atoi(&line[i]);
 
-    /* Skip to next space and parse y */
     while (line[i] && line[i] != ' ')
         i++;
     while (line[i] == ' ')
         i++;
     y = atoi(&line[i]);
 
-    /* Store room */
     strcpy(farm->rooms[farm->room_count].name, name);
     farm->rooms[farm->room_count].x = x;
     farm->rooms[farm->room_count].y = y;
@@ -134,9 +113,6 @@ static void parse_room(t_vfarm *farm, const char *line, int is_start, int is_end
     farm->room_count++;
 }
 
-/*
-** Parse a link line: room1-room2
-*/
 static void parse_link(t_vfarm *farm, const char *line)
 {
     char room1[MAX_NAME_LEN];
@@ -147,24 +123,20 @@ static void parse_link(t_vfarm *farm, const char *line)
     if (farm->link_count >= MAX_LINKS)
         return;
 
-    /* Parse room1 (up to dash) */
     i = 0;
     j = 0;
     while (line[i] && line[i] != '-' && j < MAX_NAME_LEN - 1)
         room1[j++] = line[i++];
     room1[j] = '\0';
 
-    /* Skip dash */
     if (line[i] == '-')
         i++;
 
-    /* Parse room2 */
     j = 0;
     while (line[i] && line[i] != '\n' && line[i] != '\r' && j < MAX_NAME_LEN - 1)
         room2[j++] = line[i++];
     room2[j] = '\0';
 
-    /* Find room indices */
     idx1 = find_room_index(farm, room1);
     idx2 = find_room_index(farm, room2);
 
@@ -176,9 +148,6 @@ static void parse_link(t_vfarm *farm, const char *line)
     }
 }
 
-/*
-** Parse a single move: Lx-room
-*/
 static void parse_single_move(t_vfarm *farm, const char *move_str)
 {
     int ant_id;
@@ -194,24 +163,20 @@ static void parse_single_move(t_vfarm *farm, const char *move_str)
     if (turn->move_count >= MAX_MOVES_PER_TURN)
         return;
 
-    /* Skip 'L' and parse ant_id */
     i = 1;
     ant_id = atoi(&move_str[i]);
 
-    /* Skip to dash */
     while (move_str[i] && move_str[i] != '-')
         i++;
     if (move_str[i] == '-')
         i++;
 
-    /* Parse room name */
     j = 0;
     while (move_str[i] && move_str[i] != ' ' && move_str[i] != '\n' 
            && move_str[i] != '\r' && j < MAX_NAME_LEN - 1)
         room_name[j++] = move_str[i++];
     room_name[j] = '\0';
 
-    /* Find room index */
     room_idx = find_room_index(farm, room_name);
     if (room_idx >= 0 && ant_id > 0)
     {
@@ -221,9 +186,6 @@ static void parse_single_move(t_vfarm *farm, const char *move_str)
     }
 }
 
-/*
-** Parse a movement line containing multiple moves
-*/
 static void parse_move_line(t_vfarm *farm, const char *line)
 {
     char move[MAX_NAME_LEN];
@@ -232,34 +194,26 @@ static void parse_move_line(t_vfarm *farm, const char *line)
     if (farm->turn_count >= MAX_TURNS)
         return;
 
-    /* Start a new turn */
     farm->turns[farm->turn_count].move_count = 0;
     farm->turn_count++;
 
-    /* Parse each move (space-separated) */
     i = 0;
     while (line[i])
     {
-        /* Skip spaces */
         while (line[i] == ' ')
             i++;
 
-        /* Collect move string */
         j = 0;
         while (line[i] && line[i] != ' ' && line[i] != '\n' 
                && line[i] != '\r' && j < MAX_NAME_LEN - 1)
             move[j++] = line[i++];
         move[j] = '\0';
 
-        /* Parse the move */
         if (move[0] == 'L')
             parse_single_move(farm, move);
     }
 }
 
-/*
-** Strip trailing whitespace from line
-*/
 static void strip_line(char *line)
 {
     int len;
@@ -273,9 +227,6 @@ static void strip_line(char *line)
     }
 }
 
-/*
-** Main parsing function - reads from file or stdin
-*/
 t_vfarm *parse_input(const char *filename)
 {
     t_vfarm *farm;
@@ -289,7 +240,6 @@ t_vfarm *parse_input(const char *filename)
     if (!farm)
         return (NULL);
 
-    /* Open file or use stdin */
     if (filename)
     {
         input = fopen(filename, "r");
@@ -313,11 +263,9 @@ t_vfarm *parse_input(const char *filename)
     {
         strip_line(line);
 
-        /* Skip empty lines */
         if (line[0] == '\0')
             continue;
 
-        /* Check for ##start and ##end commands */
         if (strcmp(line, "##start") == 0)
         {
             next_is_start = 1;
@@ -329,15 +277,12 @@ t_vfarm *parse_input(const char *filename)
             continue;
         }
 
-        /* Skip comments */
         if (line[0] == '#')
             continue;
 
-        /* Try to parse ant count first */
         if (!got_ants && line[0] >= '0' && line[0] <= '9')
         {
             int num = atoi(line);
-            /* Check if it's just a number (ant count) */
             int is_just_num = 1;
             int k = 0;
             while (line[k])
@@ -357,7 +302,6 @@ t_vfarm *parse_input(const char *filename)
             }
         }
 
-        /* Parse room */
         if (is_room_line(line))
         {
             parse_room(farm, line, next_is_start, next_is_end);
@@ -366,14 +310,12 @@ t_vfarm *parse_input(const char *filename)
             continue;
         }
 
-        /* Parse link */
         if (is_link_line(line))
         {
             parse_link(farm, line);
             continue;
         }
 
-        /* Parse movements */
         if (is_move_line(line))
         {
             parse_move_line(farm, line);
