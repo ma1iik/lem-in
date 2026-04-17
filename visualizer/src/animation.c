@@ -135,3 +135,31 @@ void reset_animation(t_visualizer *vis)
     if (vis->farm->turn_count > 0)
         apply_turn(vis);
 }
+
+void step_one_turn(t_visualizer *vis)
+{
+    int i;
+    t_vfarm *farm;
+
+    farm = vis->farm;
+    if (vis->current_turn >= farm->turn_count)
+        return;
+    i = 0;
+    while (i < farm->ant_count)
+    {
+        if (vis->ants[i].active)
+        {
+            vis->ants[i].current_room = vis->ants[i].target_room;
+            vis->ants[i].x = farm->rooms[vis->ants[i].current_room].draw_x;
+            vis->ants[i].y = farm->rooms[vis->ants[i].current_room].draw_y;
+            vis->ants[i].progress = 1.0f;
+            if (vis->ants[i].target_room == farm->end_idx)
+                vis->ants[i].finished = 1;
+        }
+        i++;
+    }
+    vis->turn_progress = 0.0f;
+    vis->current_turn++;
+    if (vis->current_turn < farm->turn_count)
+        apply_turn(vis);
+}

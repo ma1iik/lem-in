@@ -2,194 +2,556 @@
 
 #define MAX_PATHS 100
 
-/* BFS for disj paths, then BFS-ordered all paths */
+/* =====================================================================
+** Vertex-disjoint paths via Edmonds-Karp on a node-split flow graph.
+**
+** Each room R becomes two nodes:  R_in = R_idx,  R_out = R_idx + n_rooms
+** Internal edge  R_in → R_out  capacity 1 (INF for start/end)
+** Connection edges (undirected u-v):
+**   u_out → v_in  cap 1
+**   v_out → u_in  cap 1
+** Source = start_out,  Sink = end_in
+**
+** Augmentation is done one step at a time.  After each step, all
+** current paths are extracted and min_turns is evaluated.  We keep
+** augmenting only while the score improves (mirroring the generator).
+** ===================================================================== */
 
-typedef struct s_bfs_node
+typedef struct s_edge
 {
-	t_room				*room;
-	struct s_bfs_node	*next;
-}	t_bfs_node;
+	int	to;
+	int	cap;
+	int	base_cap;
+	int	rev_idx;
+	int	visited;
+}	t_edge;
 
-static void	bfs_enqueue(t_bfs_node **front, t_bfs_node **rear, t_room *room)
+typedef struct s_graph
 {
-	t_bfs_node	*node;
+	t_edge	**adj;
+	int		*size;
+	int		*alloc;
+	int		node_count;
+}	t_graph;
 
-	node = malloc(sizeof(t_bfs_node));
-	if (!node)
+static t_graph	*graph_new(int node_count)
+{
+	t_graph	*g;
+
+	g = malloc(sizeof(t_graph));
+	if (!g)
+		return (NULL);
+	g->node_count = node_count;
+	g->adj = calloc(node_count, sizeof(t_edge *));
+	g->size = calloc(node_count, sizeof(int));
+	g->alloc = calloc(node_count, sizeof(int));
+	if (!g->adj || !g->size || !g->alloc)
+	{
+		free(g->adj);
+		free(g->size);
+		free(g->alloc);
+		free(g);
+		return (NULL);
+	}
+	return (g);
+}
+
+static void	graph_free(t_graph *g)
+{
+	int	i;
+
+	if (!g)
 		return ;
-	node->room = room;
-	node->next = NULL;
-	if (*rear)
-		(*rear)->next = node;
-	else
-		*front = node;
-	*rear = node;
+	i = 0;
+	while (i < g->node_count)
+		free(g->adj[i++]);
+	free(g->adj);
+	free(g->size);
+	free(g->alloc);
+	free(g);
 }
 
-static t_room	*bfs_dequeue(t_bfs_node **front, t_bfs_node **rear)
+static int	graph_grow(t_graph *g, int u)
 {
-	t_bfs_node	*node;
-	t_room		*room;
+	int		new_size;
+	t_edge	*tmp;
 
-	if (!*front)
+	if (g->size[u] < g->alloc[u])
+		return (1);
+	new_size = g->alloc[u] ? g->alloc[u] * 2 : 4;
+	tmp = realloc(g->adj[u], sizeof(t_edge) * new_size);
+	if (!tmp)
+		return (0);
+	g->adj[u] = tmp;
+	g->alloc[u] = new_size;
+	return (1);
+}
+
+static int	graph_add_edge(t_graph *g, int u, int v, int cap)
+{
+	int	fwd;
+	int	rev;
+
+	if (!graph_grow(g, u) || !graph_grow(g, v))
+		return (0);
+	fwd = g->size[u];
+	rev = g->size[v];
+	g->adj[u][fwd].to = v;
+	g->adj[u][fwd].cap = cap;
+	g->adj[u][fwd].base_cap = cap;
+	g->adj[u][fwd].rev_idx = rev;
+	g->adj[u][fwd].visited = 0;
+	g->adj[v][rev].to = u;
+	g->adj[v][rev].cap = 0;
+	g->adj[v][rev].base_cap = 0;
+	g->adj[v][rev].rev_idx = fwd;
+	g->adj[v][rev].visited = 0;
+	g->size[u]++;
+	g->size[v]++;
+	return (1);
+}
+
+static void	graph_clear_visited(t_graph *g)
+{
+	int	i;
+	int	j;
+
+	i = 0;
+	while (i < g->node_count)
+	{
+		j = 0;
+		while (j < g->size[i])
+		{
+			g->adj[i][j].visited = 0;
+			j++;
+		}
+		i++;
+	}
+}
+
+static int	bfs_find_path(t_graph *g, int src, int sink,
+	int *parent, int *edge_idx)
+{
+	int	*visited;
+	int	*queue;
+	int	head;
+	int	tail;
+	int	u;
+	int	i;
+
+	visited = calloc(g->node_count, sizeof(int));
+	queue = malloc(g->node_count * sizeof(int));
+	if (!visited || !queue)
+	{
+		free(visited);
+		free(queue);
+		return (0);
+	}
+	head = 0;
+	tail = 0;
+	visited[src] = 1;
+	queue[tail++] = src;
+	while (head < tail)
+	{
+		u = queue[head++];
+		if (u == sink)
+		{
+			free(visited);
+			free(queue);
+			return (1);
+		}
+		i = 0;
+		while (i < g->size[u])
+		{
+			if (!visited[g->adj[u][i].to] && g->adj[u][i].cap > 0)
+			{
+				visited[g->adj[u][i].to] = 1;
+				parent[g->adj[u][i].to] = u;
+				edge_idx[g->adj[u][i].to] = i;
+				queue[tail++] = g->adj[u][i].to;
+			}
+			i++;
+		}
+	}
+	free(visited);
+	free(queue);
+	return (0);
+}
+
+/* Run one augmentation step.  Returns 1 if a path was found and
+** augmented, 0 if no augmenting path exists.                          */
+static int	augment_flow(t_graph *g, int src, int sink,
+	int *parent, int *edge_idx)
+{
+	int	v;
+	int	e;
+	int	flow;
+
+	if (!bfs_find_path(g, src, sink, parent, edge_idx))
+		return (0);
+	flow = INT_MAX;
+	v = sink;
+	while (v != src)
+	{
+		if (g->adj[parent[v]][edge_idx[v]].cap < flow)
+			flow = g->adj[parent[v]][edge_idx[v]].cap;
+		v = parent[v];
+	}
+	v = sink;
+	while (v != src)
+	{
+		e = edge_idx[v];
+		g->adj[parent[v]][e].cap -= flow;
+		g->adj[g->adj[parent[v]][e].to][g->adj[parent[v]][e].rev_idx].cap += flow;
+		v = parent[v];
+	}
+	return (1);
+}
+
+/* Iterative DFS tracing one path through used forward edges
+** (base_cap>0, cap==0, visited==0).  Marks traced edges so they won't
+** be found again within the same extraction round.                    */
+static int	*extract_path(t_graph *g, int src, int sink, int *out_len)
+{
+	int	*stack;
+	int	*parent;
+	int	*edge_idx;
+	int	*visited;
+	int	top;
+	int	u;
+	int	i;
+	int	found;
+	int	*path;
+	int	path_len;
+	int	v;
+
+	stack = malloc(g->node_count * sizeof(int));
+	parent = malloc(g->node_count * sizeof(int));
+	edge_idx = malloc(g->node_count * sizeof(int));
+	visited = calloc(g->node_count, sizeof(int));
+	if (!stack || !parent || !edge_idx || !visited)
+	{
+		free(stack);
+		free(parent);
+		free(edge_idx);
+		free(visited);
+		*out_len = 0;
 		return (NULL);
-	node = *front;
-	room = node->room;
-	*front = node->next;
-	if (!*front)
-		*rear = NULL;
-	free(node);
-	return (room);
-}
-
-static void	bfs_clear_queue(t_bfs_node **front)
-{
-	t_bfs_node	*tmp;
-
-	while (*front)
-	{
-		tmp = *front;
-		*front = (*front)->next;
-		free(tmp);
 	}
-}
-
-static void	reset_bfs(t_farm *farm)
-{
-	t_list	*cur;
-	t_room	*room;
-
-	cur = farm->rooms;
-	while (cur)
+	i = 0;
+	while (i < g->node_count)
+		parent[i++] = -1;
+	top = 0;
+	stack[0] = src;
+	visited[src] = 1;
+	while (top >= 0)
 	{
-		room = (t_room *)cur->content;
-		room->visited = 0;
-		room->in_queue = 0;
-		room->parent = NULL;
-		cur = cur->next;
+		u = stack[top];
+		if (u == sink)
+			break ;
+		found = 0;
+		i = 0;
+		while (i < g->size[u])
+		{
+			if (!visited[g->adj[u][i].to]
+				&& g->adj[u][i].base_cap > 0
+				&& g->adj[u][i].cap == 0
+				&& !g->adj[u][i].visited)
+			{
+				visited[g->adj[u][i].to] = 1;
+				parent[g->adj[u][i].to] = u;
+				edge_idx[g->adj[u][i].to] = i;
+				top++;
+				stack[top] = g->adj[u][i].to;
+				found = 1;
+				break ;
+			}
+			i++;
+		}
+		if (!found)
+		{
+			visited[u] = 0;
+			top--;
+		}
 	}
-}
-
-static t_path	*trace_path(t_room *end_room)
-{
-	t_path	*path;
-	t_list	*path_list;
-	t_room	*cur;
-	int		len;
-
-	path = malloc(sizeof(t_path));
+	if (top < 0)
+	{
+		free(stack);
+		free(parent);
+		free(edge_idx);
+		free(visited);
+		*out_len = 0;
+		return (NULL);
+	}
+	path_len = 0;
+	v = sink;
+	while (v != -1)
+	{
+		path_len++;
+		v = parent[v];
+	}
+	path = malloc(path_len * sizeof(int));
 	if (!path)
-		return (NULL);
-	path_list = NULL;
-	cur = end_room;
-	len = 0;
-	while (cur)
 	{
-		ft_lstadd_front(&path_list, ft_lstnew(cur));
-		len++;
-		cur = cur->parent;
+		free(stack);
+		free(parent);
+		free(edge_idx);
+		free(visited);
+		*out_len = 0;
+		return (NULL);
 	}
-	path->path = path_list;
-	path->len = len - 1;
-	path->issues = 0;
+	v = sink;
+	i = path_len - 1;
+	while (i >= 0)
+	{
+		path[i] = v;
+		if (parent[v] != -1)
+			g->adj[parent[v]][edge_idx[v]].visited = 1;
+		v = parent[v];
+		i--;
+	}
+	*out_len = path_len;
+	free(stack);
+	free(parent);
+	free(edge_idx);
+	free(visited);
 	return (path);
 }
 
-static t_path	*bfs_find_path(t_farm *farm)
+/* Convert extracted node-index path to a t_path with room pointers.
+** nodes[0] = src = start_out (>= n_rooms); in-nodes (< n_rooms) give
+** intermediate rooms and the sink (end_in).                           */
+static t_path	*nodes_to_path(int *nodes, int n_nodes,
+	t_room **rooms, int n_rooms)
 {
-	t_bfs_node	*front;
-	t_bfs_node	*rear;
-	t_room		*current;
-	t_room		*neighbor;
-	t_list		*conn;
-	t_path		*result;
+	t_path	*p;
+	t_list	*lst;
+	t_list	*node;
+	int		i;
 
-	reset_bfs(farm);
-	front = NULL;
-	rear = NULL;
-	farm->start_room->in_queue = 1;
-	bfs_enqueue(&front, &rear, farm->start_room);
-	result = NULL;
-	while (front)
+	p = malloc(sizeof(t_path));
+	if (!p)
+		return (NULL);
+	lst = NULL;
+	node = ft_lstnew(rooms[nodes[0] - n_rooms]);
+	if (!node)
 	{
-		current = bfs_dequeue(&front, &rear);
-		if (current->is_end)
+		free(p);
+		return (NULL);
+	}
+	ft_lstadd_back(&lst, node);
+	i = 1;
+	while (i < n_nodes)
+	{
+		if (nodes[i] < n_rooms)
 		{
-			result = trace_path(current);
-			bfs_clear_queue(&front);
-			return (result);
-		}
-		current->visited = 1;
-		conn = current->connections;
-		while (conn)
-		{
-			neighbor = (t_room *)conn->content;
-			if (!neighbor->visited && !neighbor->in_queue
-				&& (neighbor->score != -1 || neighbor->is_start || neighbor->is_end))
+			node = ft_lstnew(rooms[nodes[i]]);
+			if (!node)
 			{
-				neighbor->parent = current;
-				neighbor->in_queue = 1;
-				bfs_enqueue(&front, &rear, neighbor);
+				free_path_list(lst);
+				free(p);
+				return (NULL);
 			}
-			conn = conn->next;
+			ft_lstadd_back(&lst, node);
 		}
+		i++;
 	}
-	return (NULL);
+	p->path = lst;
+	p->len = ft_lstsize(lst) - 1;
+	p->issues = 0;
+	p->score = 0;
+	return (p);
 }
 
-static void	mark_used(t_path *path)
+static t_list	*extract_paths(t_graph *g, int src, int sink,
+	t_room **rooms, int n_rooms)
 {
-	t_list	*cur;
-	t_room	*room;
+	t_list	*paths;
+	int		*nodes;
+	int		n_nodes;
+	t_path	*p;
+	t_list	*entry;
 
-	if (!path || !path->path)
-		return ;
-	cur = path->path;
-	while (cur)
+	paths = NULL;
+	while (1)
 	{
-		room = (t_room *)cur->content;
-		if (!room->is_start && !room->is_end)
-			room->score = -1;
-		cur = cur->next;
+		nodes = extract_path(g, src, sink, &n_nodes);
+		if (!nodes)
+			break ;
+		p = nodes_to_path(nodes, n_nodes, rooms, n_rooms);
+		free(nodes);
+		if (!p)
+			break ;
+		entry = ft_lstnew(p);
+		if (!entry)
+		{
+			free_path_list(p->path);
+			free(p);
+			break ;
+		}
+		ft_lstadd_back(&paths, entry);
 	}
+	return (paths);
 }
 
-static void	reset_used(t_farm *farm)
+static void	free_tpath(void *content)
+{
+	t_path	*p;
+
+	p = (t_path *)content;
+	free_path_list(p->path);
+	free(p);
+}
+
+static void	reset_scores(t_farm *farm)
 {
 	t_list	*cur;
-	t_room	*room;
 
 	cur = farm->rooms;
 	while (cur)
 	{
-		room = (t_room *)cur->content;
-		room->score = 0;
+		((t_room *)cur->content)->score = 0;
 		cur = cur->next;
 	}
 }
 
 t_list	*get_disj_paths(t_farm *farm)
 {
-	t_list	*paths;
-	t_path	*path;
+	int			n_rooms;
+	t_room		**rooms;
+	t_graph		*g;
+	t_list		*cur;
+	t_room		*room;
+	t_list		*conn;
+	int			u;
+	int			v;
+	int			cap;
+	int			src;
+	int			sink;
+	int			*parent;
+	int			*edge_idx;
+	t_list		*best_paths;
+	int			best_turns;
+	t_list		*cur_paths;
+	int			cur_count;
+	t_path		*cur_arr;
+	int			cur_turns;
+	t_list		*tmp;
+	int			i;
 
 	if (!farm || !farm->start_room || !farm->end_room)
 		return (NULL);
-	reset_used(farm);
-	paths = NULL;
-	while (1)
+	n_rooms = 0;
+	cur = farm->rooms;
+	while (cur)
 	{
-		path = bfs_find_path(farm);
-		if (!path)
-			break ;
-		ft_lstadd_back(&paths, ft_lstnew(path));
-		mark_used(path);
-		if (path->len == 1)
-			break ;
+		((t_room *)cur->content)->score = n_rooms++;
+		cur = cur->next;
 	}
-	reset_used(farm);
-	return (paths);
+	rooms = malloc(n_rooms * sizeof(t_room *));
+	if (!rooms)
+	{
+		reset_scores(farm);
+		return (NULL);
+	}
+	cur = farm->rooms;
+	while (cur)
+	{
+		room = (t_room *)cur->content;
+		rooms[room->score] = room;
+		cur = cur->next;
+	}
+	g = graph_new(2 * n_rooms);
+	if (!g)
+	{
+		free(rooms);
+		reset_scores(farm);
+		return (NULL);
+	}
+	u = 0;
+	while (u < n_rooms)
+	{
+		cap = (rooms[u]->is_start || rooms[u]->is_end) ? n_rooms : 1;
+		graph_add_edge(g, u, u + n_rooms, cap);
+		u++;
+	}
+	cur = farm->rooms;
+	while (cur)
+	{
+		room = (t_room *)cur->content;
+		u = room->score;
+		conn = room->connections;
+		while (conn)
+		{
+			v = ((t_room *)conn->content)->score;
+			if (u < v)
+			{
+				graph_add_edge(g, u + n_rooms, v, 1);
+				graph_add_edge(g, v + n_rooms, u, 1);
+			}
+			conn = conn->next;
+		}
+		cur = cur->next;
+	}
+	src = farm->start_room->score + n_rooms;
+	sink = farm->end_room->score;
+	parent = malloc(2 * n_rooms * sizeof(int));
+	edge_idx = malloc(2 * n_rooms * sizeof(int));
+	if (!parent || !edge_idx)
+	{
+		free(parent);
+		free(edge_idx);
+		graph_free(g);
+		free(rooms);
+		reset_scores(farm);
+		return (NULL);
+	}
+	best_paths = NULL;
+	best_turns = INT_MAX;
+	while (augment_flow(g, src, sink, parent, edge_idx))
+	{
+		graph_clear_visited(g);
+		cur_paths = extract_paths(g, src, sink, rooms, n_rooms);
+		cur_count = ft_lstsize(cur_paths);
+		cur_turns = INT_MAX;
+		if (cur_count > 0)
+		{
+			cur_arr = malloc(sizeof(t_path) * cur_count);
+			if (cur_arr)
+			{
+				tmp = cur_paths;
+				i = 0;
+				while (tmp)
+				{
+					cur_arr[i] = *((t_path *)tmp->content);
+					tmp = tmp->next;
+					i++;
+				}
+				cur_turns = min_turns(cur_arr, cur_count, farm->ant_count);
+				free(cur_arr);
+			}
+		}
+		if (cur_turns < best_turns)
+		{
+			if (best_paths)
+				ft_lstclear(&best_paths, free_tpath);
+			best_paths = cur_paths;
+			best_turns = cur_turns;
+		}
+		else
+			ft_lstclear(&cur_paths, free_tpath);
+	}
+	free(parent);
+	free(edge_idx);
+	graph_free(g);
+	free(rooms);
+	reset_scores(farm);
+	return (best_paths);
 }
+
+/* =====================================================================
+** DFS to enumerate all simple paths (used for overlapping-path strategy)
+** ===================================================================== */
 
 typedef struct s_stack_node
 {

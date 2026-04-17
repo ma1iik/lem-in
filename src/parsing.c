@@ -250,7 +250,21 @@ t_farm *parse_input(){
 			case LINE_ANT_COUNT:
 				if (phase == 0) {
 					phase++;
+					if (ft_strlen(line) > 10)
+					{
+						free(line);
+						free_farm(farm);
+						ft_printf("ERROR\n");
+						exit(1);
+					}
 					farm->ant_count = ft_atoi(line);
+					if (farm->ant_count <= 0)
+					{
+						free(line);
+						free_farm(farm);
+						ft_printf("ERROR\n");
+						exit(1);
+					}
 				}
 				else {
 					free(line);

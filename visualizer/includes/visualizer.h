@@ -139,5 +139,6 @@ void        init_ant_states(t_visualizer *vis);
 void        update_animation(t_visualizer *vis, float delta_time);
 void        apply_turn(t_visualizer *vis);
 void        reset_animation(t_visualizer *vis);
+void        step_one_turn(t_visualizer *vis);
 
 #endif

@@ -1,5 +1,14 @@
 #include "visualizer.h"
 
+static float clamp_speed(float v)
+{
+    if (v < 0.1f)
+        return (0.1f);
+    if (v > 4.0f)
+        return (4.0f);
+    return (v);
+}
+
 static int init_sdl(t_visualizer *vis)
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -39,6 +48,23 @@ static void handle_keydown(t_visualizer *vis, SDL_Keycode key)
 {
     switch (key)
     {
+        case SDLK_SPACE:
+            vis->paused = !vis->paused;
+            break;
+        case SDLK_n:
+            if (vis->paused)
+                step_one_turn(vis);
+            break;
+        case SDLK_EQUALS:
+        case SDLK_PLUS:
+            vis->speed = clamp_speed(vis->speed + 0.2f);
+            break;
+        case SDLK_MINUS:
+            vis->speed = clamp_speed(vis->speed - 0.2f);
+            break;
+        case SDLK_0:
+            vis->speed = ANIMATION_SPEED;
+            break;
         case SDLK_r:
             reset_animation(vis);
             vis->paused = 0;
@@ -87,6 +113,10 @@ static void print_controls(void)
 {
     printf("\n=== Lem-in Visualizer ===\n");
     printf("Controls:\n");
+    printf("  SPACE - Pause/Resume\n");
+    printf("  N     - Step one turn (while paused)\n");
+    printf("  +/-   - Speed down/up\n");
+    printf("  0     - Reset speed\n");
     printf("  R     - Restart\n");
     printf("  Q/ESC - Quit\n");
     printf("========================\n\n");
