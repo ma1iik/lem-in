@@ -211,10 +211,7 @@ int add_room(t_farm *farm, char* line, int next_start, int next_end) {
 	room->is_start = 0;
 	room->is_end = 0;
 	room->connections = NULL;
-	room->parent = NULL;
 	room->score = 0;
-	room->visited = 0;
-	room->in_queue = 0;
 	if (next_start) {
 		room->is_start = 1;
 		farm->start_room = room;

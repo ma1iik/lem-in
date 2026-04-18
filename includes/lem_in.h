@@ -1,3 +1,4 @@
+
 #ifndef LEM_IN_H
 # define LEM_IN_H
 
@@ -13,11 +14,7 @@ typedef struct s_room {
     int is_start;
     int is_end;
     t_list *connections;
-    struct s_room *parent;
     int score;
-    int issues;
-    int visited;
-    int in_queue;
 } t_room;
 
 typedef struct s_farm {
@@ -31,8 +28,6 @@ typedef struct s_farm {
 
 typedef struct s_path {
     int len;
-    double score;
-    int issues;
     t_list *path;
 } t_path;
 
@@ -50,11 +45,6 @@ typedef enum e_line_type {
     LINE_EMPTY,
     LINE_INVALID
 } t_line_type;
-
-typedef enum e_strategy {
-    STRATEGY_SHORTEST,
-    STRATEGY_LEAST_CONFLICTS
-} t_strategy;
 
 void        save_line(t_farm *farm, char *line);
 void        free_farm(t_farm *farm);
@@ -79,14 +69,13 @@ void		parse_cmd(char *line, int *next_start, int *next_end);
 int		    add_room(t_farm *farm, char *line, int next_start, int next_end);
 t_farm		*parse_input(void);
 
-t_list		*get_all_paths(t_farm *farm);
 t_list		*get_disj_paths(t_farm *farm);
-int			paths_conflict(t_path *p1, t_path *p2);
-void		count_issues(t_path *paths, int n);
+
+
 int			fits_turns(t_path *paths, int n, int ants, int turns);
 int			max_path_len(t_path *paths, int n);
 int			min_turns(t_path *paths, int n, int ants);
-void		pick_path_set(t_path *paths, int n, t_path_set *out, t_strategy strat);
+
 void		run_ants(t_path_set *set, int ants);
 
 #endif

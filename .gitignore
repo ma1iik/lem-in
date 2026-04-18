@@ -3,3 +3,6 @@
 lem-in-asan
 lem-in-asan.dSYM
 .DS_Store
+lem-in-bench
+bench*
+generator_osx

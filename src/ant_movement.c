@@ -272,7 +272,7 @@ void	run_ants(t_path_set *set, int ants)
 	t_ant	*ant_arr;
 	int		turn;
 	int		done;
-	int		i;
+
 
 	paths = set->paths;
 	n = set->count;
