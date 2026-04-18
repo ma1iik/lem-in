@@ -4,5 +4,5 @@ lem-in-asan
 lem-in-asan.dSYM
 .DS_Store
 lem-in-bench
-bench*
+bench.sh
 generator_osx
