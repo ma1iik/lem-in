@@ -7,7 +7,7 @@ int find_room_index(t_vfarm *farm, const char *name)
     i = 0;
     while (i < farm->room_count)
     {
-        if (strcmp(farm->rooms[i].name, name) == 0)
+        if (ft_strcmp(farm->rooms[i].name, name) == 0)
             return (i);
         i++;
     }
@@ -71,7 +71,7 @@ static int is_move_line(const char *line)
 {
     if (!line || line[0] != 'L')
         return (0);
-    return (strchr(line, '-') != NULL);
+    return (ft_strchr(line, '-') != NULL);
 }
 
 static void parse_room(t_vfarm *farm, const char *line, int is_start, int is_end)
@@ -91,15 +91,15 @@ static void parse_room(t_vfarm *farm, const char *line, int is_start, int is_end
 
     while (line[i] == ' ')
         i++;
-    x = atoi(&line[i]);
+    x = ft_atoi(&line[i]);
 
     while (line[i] && line[i] != ' ')
         i++;
     while (line[i] == ' ')
         i++;
-    y = atoi(&line[i]);
+    y = ft_atoi(&line[i]);
 
-    strcpy(farm->rooms[farm->room_count].name, name);
+    ft_strlcpy(farm->rooms[farm->room_count].name, name, MAX_NAME_LEN);
     farm->rooms[farm->room_count].x = x;
     farm->rooms[farm->room_count].y = y;
     farm->rooms[farm->room_count].is_start = is_start;
@@ -164,7 +164,7 @@ static void parse_single_move(t_vfarm *farm, const char *move_str)
         return;
 
     i = 1;
-    ant_id = atoi(&move_str[i]);
+    ant_id = ft_atoi(&move_str[i]);
 
     while (move_str[i] && move_str[i] != '-')
         i++;
@@ -218,7 +218,7 @@ static void strip_line(char *line)
 {
     int len;
 
-    len = strlen(line);
+    len = ft_strlen(line);
     while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r' 
                        || line[len - 1] == ' '))
     {
@@ -236,7 +236,7 @@ t_vfarm *parse_input(const char *filename)
     int got_ants;
     FILE *input;
 
-    farm = calloc(1, sizeof(t_vfarm));
+    farm = ft_calloc(1, sizeof(t_vfarm));
     if (!farm)
         return (NULL);
 
@@ -245,7 +245,9 @@ t_vfarm *parse_input(const char *filename)
         input = fopen(filename, "r");
         if (!input)
         {
-            fprintf(stderr, "Error: Cannot open file %s\n", filename);
+            ft_putstr_fd("Error: Cannot open file ", 2);
+            ft_putstr_fd((char *)filename, 2);
+            ft_putstr_fd("\n", 2);
             free(farm);
             return (NULL);
         }
@@ -266,12 +268,12 @@ t_vfarm *parse_input(const char *filename)
         if (line[0] == '\0')
             continue;
 
-        if (strcmp(line, "##start") == 0)
+        if (ft_strcmp(line, "##start") == 0)
         {
             next_is_start = 1;
             continue;
         }
-        if (strcmp(line, "##end") == 0)
+        if (ft_strcmp(line, "##end") == 0)
         {
             next_is_end = 1;
             continue;
@@ -282,7 +284,7 @@ t_vfarm *parse_input(const char *filename)
 
         if (!got_ants && line[0] >= '0' && line[0] <= '9')
         {
-            int num = atoi(line);
+            int num = ft_atoi(line);
             int is_just_num = 1;
             int k = 0;
             while (line[k])

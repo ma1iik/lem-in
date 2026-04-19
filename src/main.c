@@ -29,13 +29,13 @@ static t_path	*lst_to_arr(t_list *lst, int *n)
 int	main(int argc, char **argv)
 {
 	t_farm		*farm;
-	t_list		*disj_lst;
-	t_path		*disj_arr;
-	int			paths_num_meth1;
-	t_path_set	bfs_set;
+	t_list		*paths_lst;
+	t_path		*paths_arr;
+	int			paths_count;
+	t_path_set	solution;
 
-	bfs_set.paths = NULL;
-	bfs_set.count = 0;
+	solution.paths = NULL;
+	solution.count = 0;
 	(void)argv;
 	if (argc != 1)
 	{
@@ -48,22 +48,22 @@ int	main(int argc, char **argv)
 		ft_printf("ERROR\n");
 		exit(1);
 	}
-	disj_lst = get_disj_paths(farm);
-	disj_arr = lst_to_arr(disj_lst, &paths_num_meth1);
-	ft_lstclear(&disj_lst, free);
-	if (!disj_arr || paths_num_meth1 == 0)
+	paths_lst = get_optimal_paths(farm);
+	paths_arr = lst_to_arr(paths_lst, &paths_count);
+	ft_lstclear(&paths_lst, free);
+	if (!paths_arr || paths_count == 0)
 	{
-		free_paths_arr(disj_arr, paths_num_meth1);
+		free_paths_arr(paths_arr, paths_count);
 		free_farm(farm);
 		ft_printf("ERROR\n");
 		exit(1);
 	}
-	bfs_set.paths = disj_arr;
-	bfs_set.count = paths_num_meth1;
+	solution.paths = paths_arr;
+	solution.count = paths_count;
 	dump_input(farm);
 	ft_printf("\n");
-	run_ants(&bfs_set, farm->ant_count);
-	free_paths_arr(disj_arr, paths_num_meth1);
+	run_ants(&solution, farm->ant_count);
+	free_paths_arr(paths_arr, paths_count);
 	free_farm(farm);
 	return (0);
 }

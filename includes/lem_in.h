@@ -69,7 +69,7 @@ void		parse_cmd(char *line, int *next_start, int *next_end);
 int		    add_room(t_farm *farm, char *line, int next_start, int next_end);
 t_farm		*parse_input(void);
 
-t_list		*get_disj_paths(t_farm *farm);
+t_list		*get_optimal_paths(t_farm *farm);
 
 
 int			fits_turns(t_path *paths, int n, int ants, int turns);

@@ -6,8 +6,9 @@ NAME = visu-hex
 SRC_DIR = src
 OBJ_DIR = obj
 INC_DIR = includes
+LIBFT_DIR = ../Libft
 
-INCLUDES = -I$(INC_DIR)
+INCLUDES = -I$(INC_DIR) -I$(LIBFT_DIR)
 
 SDL_CFLAGS = $(shell sdl2-config --cflags 2>/dev/null || echo "-I/opt/homebrew/include/SDL2 -I/usr/local/include/SDL2")
 SDL_LDFLAGS = $(shell sdl2-config --libs 2>/dev/null || echo "-L/opt/homebrew/lib -L/usr/local/lib -lSDL2")
@@ -35,7 +36,7 @@ check_sdl:
 
 $(NAME): $(OBJS)
 	@echo "$(GREEN)Linking $(NAME)...$(NC)"
-	$(CC) $(OBJS) $(SDL_LDFLAGS) -lm -o $(NAME)
+	$(CC) $(OBJS) $(LIBFT_DIR)/libft.a $(SDL_LDFLAGS) -lm -o $(NAME)
 	@echo "$(GREEN)$(NAME) created!$(NC)"
 
 $(OBJ_DIR):

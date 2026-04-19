@@ -3,10 +3,8 @@
 
 # include <SDL.h>
 # include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <unistd.h>
 # include <math.h>
+# include "libft.h"
 
 /* Window settings */
 # define WIN_WIDTH 1200

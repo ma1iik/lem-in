@@ -2,20 +2,11 @@
 
 #define MAX_PATHS 100
 
-/* =====================================================================
-** Vertex-disjoint paths via Edmonds-Karp on a node-split flow graph.
-**
-** Each room R becomes two nodes:  R_in = R_idx,  R_out = R_idx + n_rooms
-** Internal edge  R_in → R_out  capacity 1 (INF for start/end)
-** Connection edges (undirected u-v):
-**   u_out → v_in  cap 1
-**   v_out → u_in  cap 1
-** Source = start_out,  Sink = end_in
-**
-** Augmentation is done one step at a time.  After each step, all
-** current paths are extracted and min_turns is evaluated.  We keep
-** augmenting only while the score improves (mirroring the generator).
-** ===================================================================== */
+/*
+** Edmonds-Karp max flow with node splitting for vertex-disjoint paths.
+** Rooms have capacity 1 (split into in/out nodes).
+** Stop augmenting when the total turn count stops improving.
+*/
 
 typedef struct s_edge
 {
@@ -42,9 +33,9 @@ static t_graph	*graph_new(int node_count)
 	if (!g)
 		return (NULL);
 	g->node_count = node_count;
-	g->adj = calloc(node_count, sizeof(t_edge *));
-	g->size = calloc(node_count, sizeof(int));
-	g->alloc = calloc(node_count, sizeof(int));
+	g->adj = ft_calloc(node_count, sizeof(t_edge *));
+	g->size = ft_calloc(node_count, sizeof(int));
+	g->alloc = ft_calloc(node_count, sizeof(int));
 	if (!g->adj || !g->size || !g->alloc)
 	{
 		free(g->adj);
@@ -71,6 +62,31 @@ static void	graph_free(t_graph *g)
 	free(g);
 }
 
+static void	*custom_realloc_edge(void *old_ptr, int old_size, int new_size)
+{
+	void	*new_ptr;
+	int		i;
+	char	*src;
+	char	*dst;
+
+	new_ptr = malloc(new_size);
+	if (!new_ptr)
+		return (NULL);
+	if (old_ptr)
+	{
+		src = (char *)old_ptr;
+		dst = (char *)new_ptr;
+		i = 0;
+		while (i < old_size)
+		{
+			dst[i] = src[i];
+			i++;
+		}
+		free(old_ptr);
+	}
+	return (new_ptr);
+}
+
 static int	graph_grow(t_graph *g, int u)
 {
 	int		new_size;
@@ -79,7 +95,7 @@ static int	graph_grow(t_graph *g, int u)
 	if (g->size[u] < g->alloc[u])
 		return (1);
 	new_size = g->alloc[u] ? g->alloc[u] * 2 : 4;
-	tmp = realloc(g->adj[u], sizeof(t_edge) * new_size);
+	tmp = custom_realloc_edge(g->adj[u], sizeof(t_edge) * g->alloc[u], sizeof(t_edge) * new_size);
 	if (!tmp)
 		return (0);
 	g->adj[u] = tmp;
@@ -139,7 +155,7 @@ static int	bfs_find_path(t_graph *g, int src, int sink,
 	int	u;
 	int	i;
 
-	visited = calloc(g->node_count, sizeof(int));
+	visited = ft_calloc(g->node_count, sizeof(int));
 	queue = malloc(g->node_count * sizeof(int));
 	if (!visited || !queue)
 	{
@@ -178,8 +194,8 @@ static int	bfs_find_path(t_graph *g, int src, int sink,
 	return (0);
 }
 
-/* Run one augmentation step.  Returns 1 if a path was found and
-** augmented, 0 if no augmenting path exists.                          */
+/* Finds one augmenting path via BFS and pushes flow through it.
+** Returns 0 when no path to the sink exists anymore. */
 static int	augment_flow(t_graph *g, int src, int sink,
 	int *parent, int *edge_idx)
 {
@@ -208,9 +224,9 @@ static int	augment_flow(t_graph *g, int src, int sink,
 	return (1);
 }
 
-/* Iterative DFS tracing one path through used forward edges
-** (base_cap>0, cap==0, visited==0).  Marks traced edges so they won't
-** be found again within the same extraction round.                    */
+/* Traces one path from src to sink through edges that were actually used
+** (had capacity and got saturated). Marks edges as visited so the next
+** call picks a different path. */
 static int	*extract_path(t_graph *g, int src, int sink, int *out_len)
 {
 	int	*stack;
@@ -228,7 +244,7 @@ static int	*extract_path(t_graph *g, int src, int sink, int *out_len)
 	stack = malloc(g->node_count * sizeof(int));
 	parent = malloc(g->node_count * sizeof(int));
 	edge_idx = malloc(g->node_count * sizeof(int));
-	visited = calloc(g->node_count, sizeof(int));
+	visited = ft_calloc(g->node_count, sizeof(int));
 	if (!stack || !parent || !edge_idx || !visited)
 	{
 		free(stack);
@@ -318,9 +334,9 @@ static int	*extract_path(t_graph *g, int src, int sink, int *out_len)
 	return (path);
 }
 
-/* Convert extracted node-index path to a t_path with room pointers.
-** nodes[0] = src = start_out (>= n_rooms); in-nodes (< n_rooms) give
-** intermediate rooms and the sink (end_in).                           */
+/* Turns a raw array of node indices into a t_path with actual room pointers.
+** We skip out-nodes (index >= n_rooms) since they're just the split-graph
+** artifact — only in-nodes map to real rooms. */
 static t_path	*nodes_to_path(int *nodes, int n_nodes,
 	t_room **rooms, int n_rooms)
 {
@@ -413,7 +429,7 @@ static void	reset_scores(t_farm *farm)
 	}
 }
 
-t_list	*get_disj_paths(t_farm *farm)
+t_list	*get_optimal_paths(t_farm *farm)
 {
 	int			n_rooms;
 	t_room		**rooms;

@@ -13,7 +13,9 @@ static int init_sdl(t_visualizer *vis)
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        fprintf(stderr, "SDL init failed: %s\n", SDL_GetError());
+        ft_putstr_fd("SDL init failed: ", 2);
+        ft_putstr_fd((char *)SDL_GetError(), 2);
+        ft_putstr_fd("\n", 2);
         return (0);
     }
 
@@ -24,7 +26,9 @@ static int init_sdl(t_visualizer *vis)
                                    SDL_WINDOW_SHOWN);
     if (!vis->window)
     {
-        fprintf(stderr, "Window creation failed: %s\n", SDL_GetError());
+        ft_putstr_fd("Window creation failed: ", 2);
+        ft_putstr_fd((char *)SDL_GetError(), 2);
+        ft_putstr_fd("\n", 2);
         SDL_Quit();
         return (0);
     }
@@ -34,7 +38,9 @@ static int init_sdl(t_visualizer *vis)
                                        SDL_RENDERER_PRESENTVSYNC);
     if (!vis->renderer)
     {
-        fprintf(stderr, "Renderer creation failed: %s\n", SDL_GetError());
+        ft_putstr_fd("Renderer creation failed: ", 2);
+        ft_putstr_fd((char *)SDL_GetError(), 2);
+        ft_putstr_fd("\n", 2);
         SDL_DestroyWindow(vis->window);
         SDL_Quit();
         return (0);
@@ -111,15 +117,15 @@ static void cleanup(t_visualizer *vis)
 
 static void print_controls(void)
 {
-    printf("\n=== Lem-in Visualizer ===\n");
-    printf("Controls:\n");
-    printf("  SPACE - Pause/Resume\n");
-    printf("  N     - Step one turn (while paused)\n");
-    printf("  +/-   - Speed down/up\n");
-    printf("  0     - Reset speed\n");
-    printf("  R     - Restart\n");
-    printf("  Q/ESC - Quit\n");
-    printf("========================\n\n");
+    ft_printf("\n=== Lem-in Visualizer ===\n");
+    ft_printf("Controls:\n");
+    ft_printf("  SPACE - Pause/Resume\n");
+    ft_printf("  N     - Step one turn (while paused)\n");
+    ft_printf("  +/-   - Speed down/up\n");
+    ft_printf("  0     - Reset speed\n");
+    ft_printf("  R     - Restart\n");
+    ft_printf("  Q/ESC - Quit\n");
+    ft_printf("========================\n\n");
 }
 
 int main(int argc, char **argv)
@@ -135,7 +141,7 @@ int main(int argc, char **argv)
     else
         filename = NULL;
 
-    memset(&vis, 0, sizeof(t_visualizer));
+    ft_bzero(&vis, sizeof(t_visualizer));
     vis.speed = ANIMATION_SPEED;
     vis.paused = 0;
     vis.running = 1;
@@ -143,20 +149,20 @@ int main(int argc, char **argv)
     vis.farm = parse_input(filename);
     if (!vis.farm || vis.farm->room_count == 0)
     {
-        fprintf(stderr, "Error: Failed to parse input or no rooms found\n");
+        ft_putstr_fd("Error: Failed to parse input or no rooms found\n", 2);
         return (1);
     }
 
     if (vis.farm->ant_count == 0)
     {
-        fprintf(stderr, "Error: No ants specified\n");
+        ft_putstr_fd("Error: No ants specified\n", 2);
         free(vis.farm);
         return (1);
     }
 
     if (vis.farm->start_idx < 0 || vis.farm->end_idx < 0)
     {
-        fprintf(stderr, "Error: Start or end room not found\n");
+        ft_putstr_fd("Error: Start or end room not found\n", 2);
         free(vis.farm);
         return (1);
     }

@@ -41,9 +41,12 @@ static void draw_seg_digit(SDL_Renderer *renderer, int x, int y, int size, int d
 static void draw_number(SDL_Renderer *renderer, int x, int y, int size, int v)
 {
     char buf[32];
+    char *tmp;
     int i;
 
-    snprintf(buf, sizeof(buf), "%d", v);
+    tmp = ft_itoa(v);
+    ft_strlcpy(buf, tmp ? tmp : "0", sizeof(buf));
+    free(tmp);
     i = 0;
     while (buf[i])
     {
