@@ -297,6 +297,7 @@ void	run_ants(t_path_set *set, int ants)
 		done += do_turn(ant_arr, ants, paths, n, turn);
 		turn++;
 	}
+	ft_printf("%d\n", turn - 1);
 
 	free(per_path);
 	free(ant_arr);
